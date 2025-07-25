@@ -1,0 +1,51 @@
+services:
+  api_1:
+    build: .
+    container_name: api_1
+    volumes:
+      - ./:/app/tentacula
+    command: python app.py
+    ports:
+      - "5001:5001"
+
+
+  api_2:
+    build: .
+    container_name: api_2
+    volumes:
+      - ./:/app
+    command: uvicorn app:app --host 0.0.0.0 --port 5002 --workers 1 --reload --ssl-keyfile=certs/key.pem --ssl-certfile=certs/cert.pem
+    environment:
+      - TENTACULA__APP__SCHEDULERS_ENABLED=False
+      - TENTACULA__SECURITY__BASIC_USERNAME=admin_proxy
+      - TENTACULA__SECURITY__BASIC_PASSWORD=Nondetectuser
+    ports:
+      - "5002:5002"
+
+  api_3:
+    build: .
+    container_name: api_3
+    volumes:
+      - ./:/app
+    command: uvicorn app:app --host 0.0.0.0 --port 5001 --workers 1 --reload --ssl-keyfile=certs/key.pem --ssl-certfile=certs/cert.pem
+    environment:
+      - TENTACULA__APP__SCHEDULERS_ENABLED=False
+      - TENTACULA__SECURITY__BASIC_USERNAME=root_app
+      - TENTACULA__SECURITY__BASIC_PASSWORD=This!!!Password120938482edsdcuizcd09cC,3mr2-0ICksANvewv
+    ports:
+      - "5003:5003"
+
+  db_tent:
+    image: "postgres:15"
+    container_name: db_tent
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: tentacula
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+volumes:
+    pgdata:
