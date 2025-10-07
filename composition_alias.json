@@ -1,0 +1,8 @@
+{
+  "REGION": {
+    "address": "https://nginx_2:5002/sucker/first",
+    "SSL_CERTFILE": "/app/tentacula/certs/server.crt",
+    "SSL_KEYFILE": "/app/tentacula/certs/server.key",
+    "SSL_CA_CERTS": "/app/tentacula/certs/ca.crt"
+  }
+}

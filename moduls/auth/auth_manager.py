@@ -1,39 +1,26 @@
-from importlib import import_module
-
-from fastapi import Header, HTTPException, status
+from fastapi import HTTPException, status, Request
 from pydantic import BaseModel
 
-from systems.config import AppConfig
+from systems.logging import logger
 
 
 class User(BaseModel):
     username: str
 
 
-def get_auth_module():
-    """Функция выбора функции метода авторизации"""
-    if AppConfig.AUTH_METHOD == 'LDAP':
-        auth_module = import_module('moduls.auth.ldap')
-    elif AppConfig.AUTH_METHOD == 'BASIC':
-        auth_module = import_module('moduls.auth.basic')
-    else:
-        raise RuntimeError("Not valid AUTH_METHOD")
-    return auth_module
+def current_user(request: Request) -> User or None:
+    logger.info(f"Protocol: {request.headers["x-forwarded-proto"].upper()}, "
+                f"Host name: {request.headers["host"]}, "
+                f"Host ip: {request.headers["x-server-ip"]}")
 
+    subject = request.headers.get("x-client-subject")
+    serial = request.headers.get("x-client-serial")
 
-def current_user(username: str = Header(...), password: str = Header(...)) -> User or None:
-    """Функция авторизации пользователя на основе логина, пароля и секрутного ключа переданных в Header"""
+    logger.info(f"Client cert Subject: {subject}")
+    logger.info(f"Client cert Serial: {serial}")
+    logger.info(f"Client ip: {request.headers.get("x-forwarded-for")}")
 
-    # TODO: УБрать проверку секретного ключа, если не будет нужна
-    # if secret_key != AppConfig.SECRET_KEY:
-    #     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Failed secret-key")
+    if not all([subject, serial]):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Error client certificate")
 
-    # Выбор функции способа авторизации
-    auth_module = get_auth_module()
-    # Авторизация
-    user = auth_module.authenticate(username=username, password=password)
-
-    if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Error username or password")
-
-    return user
+    return subject

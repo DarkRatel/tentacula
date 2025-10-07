@@ -1,39 +1,59 @@
 services:
+  host:
+    build: .
+    container_name: host
+    restart: always
+    environment:
+      - TENTACULA__APP__SUCKERS_ENABLED=FALSE
+      - TENTACULA__APP__SCHEDULERS_ENABLED=FALSE
+    expose:
+      - "9000"
+    volumes:
+      - .:/app/tentacula
+
   api_1:
     build: .
     container_name: api_1
+    restart: always
+    environment:
+      - TENTACULA__WEB__PORT=8001
+    expose:
+      - "8001"
     volumes:
-      - ./:/app/tentacula
-    command: python app.py
+      - .:/app/tentacula
+
+  nginx_1:
+    image: nginx:1.25
+    container_name: nginx_1
+    volumes:
+      - ./nginx/default1.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./certs:/etc/nginx/certs:ro   # монтируем локальную ./certs в /etc/nginx/certs
     ports:
       - "5001:5001"
-
+    depends_on:
+      - api_1
 
   api_2:
     build: .
     container_name: api_2
-    volumes:
-      - ./:/app
-    command: uvicorn app:app --host 0.0.0.0 --port 5002 --workers 1 --reload --ssl-keyfile=certs/key.pem --ssl-certfile=certs/cert.pem
+    restart: always
     environment:
-      - TENTACULA__APP__SCHEDULERS_ENABLED=False
-      - TENTACULA__SECURITY__BASIC_USERNAME=admin_proxy
-      - TENTACULA__SECURITY__BASIC_PASSWORD=Nondetectuser
+      - TENTACULA__WEB__PORT=8002
+    expose:
+      - "8002"
+    volumes:
+      - .:/app/tentacula
+
+  nginx_2:
+    image: nginx:1.25
+    container_name: nginx_2
+    volumes:
+      - ./nginx/default2.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./certs:/etc/nginx/certs:ro   # монтируем локальную ./certs в /etc/nginx/certs
     ports:
       - "5002:5002"
-
-  api_3:
-    build: .
-    container_name: api_3
-    volumes:
-      - ./:/app
-    command: uvicorn app:app --host 0.0.0.0 --port 5001 --workers 1 --reload --ssl-keyfile=certs/key.pem --ssl-certfile=certs/cert.pem
-    environment:
-      - TENTACULA__APP__SCHEDULERS_ENABLED=False
-      - TENTACULA__SECURITY__BASIC_USERNAME=root_app
-      - TENTACULA__SECURITY__BASIC_PASSWORD=This!!!Password120938482edsdcuizcd09cC,3mr2-0ICksANvewv
-    ports:
-      - "5003:5003"
+    depends_on:
+      - api_2
 
   db_tent:
     image: "postgres:15"

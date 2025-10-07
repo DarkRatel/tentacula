@@ -5,4 +5,3 @@ class ResponseFrom(BaseModel):
     username: str
     status: str
     answer: Optional[Any]
-    log: list

@@ -37,14 +37,26 @@ def create_post(path_name: str, base_model: type(BaseModel),
 
             try:
                 logger.info(f"RUN: {router.prefix}{p_name}")
-                logger.info(f"USERNAME: {user.username}")
                 logger.info(f"UID RUN: {run_id}")
                 logger.info(f"URL: {request.url}")
-                logger.info(f"CLIENT: {request.client}")
 
-                logger.info("=====")
+                logger.info(f"Protocol: {request.headers["x-forwarded-proto"].upper()}, "
+                            f"Host name: {request.headers["host"]}, "
+                            f"Host ip: {request.headers["x-server-ip"]}")
+
+                logger.info(f"Client ip: {request.headers.get("x-forwarded-for")}")
+
+                subject = request.headers.get("x-client-subject")
+                serial = request.headers.get("x-client-serial")
+
+                if any([subject, serial]):
+                    logger.info(f"Client cert Subject: {subject}, Client cert Serial: {serial}")
+
+                logger.info("=====Input data=====")
+                [logger.info({r: v}) for r, v in data.model_dump().items()]
+                logger.info("======Function======")
                 result = func(**data.model_dump())
-                logger.info("=====")
+                logger.info("====================")
 
                 logger.info(f"DONE")
 
@@ -73,10 +85,11 @@ def create_post(path_name: str, base_model: type(BaseModel),
                         file.write(f"{item}\n")
 
             return JSONResponse(
-                ResponseFrom(username=user.username, status=status_, answer=result, log=log_output).model_dump(),
-                status_code=status.HTTP_200_OK)
+                ResponseFrom(username=str(user), status=status_, answer=result).model_dump(),
+                status_code=status.HTTP_200_OK
+            )
 
-        # Изменение имя по формуле
+        # Изменение имя функции метода по формуле
         path_function_wrapper.__name__ = f"{route_name}_{f_name}_post"
         return path_function_wrapper
 
