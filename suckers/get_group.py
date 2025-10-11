@@ -7,6 +7,7 @@ from sites.suckers import router_sucker
 from ds.ds_dict import DSDict
 from ds.ds_hook import DSHook, DS_TYPE_OBJECT, DS_TYPE_SCOPE
 
+
 class SpecData(BaseModel):
     login: str
     password: str
@@ -18,12 +19,11 @@ class SpecData(BaseModel):
     ldap_filter: str = None
     properties: str | list | tuple = None
     search_scope: DS_TYPE_SCOPE = "subtree"
-    type_object: DS_TYPE_OBJECT = "object"
 
 
-def get_object(login: str, password: str, host: str, port: int = 636, base: str = None,
-               identity: str | DSDict = None, ldap_filter: str = None, properties: str | list | tuple = None,
-               search_scope: DS_TYPE_SCOPE = "subtree", type_object: DS_TYPE_OBJECT = "object"):
+def get_group(login: str, password: str, host: str, port: int = 636, base: str = None,
+              identity: str | DSDict = None, ldap_filter: str = None, properties: str | list | tuple = None,
+              search_scope: DS_TYPE_SCOPE = "subtree"):
     with DSHook(
             login=login,
             password=password,
@@ -31,15 +31,14 @@ def get_object(login: str, password: str, host: str, port: int = 636, base: str 
             port=port,
             base=base,
     ) as ds:
-        result = ds.get_object(
+        result = ds.get_group(
             identity=identity,
             ldap_filter=ldap_filter,
             properties=properties,
             search_scope=search_scope,
-            type_object=type_object
         )
 
     return result
 
 
-create_post("get_object", SpecData, get_object, router_sucker)
+create_post("get_group", SpecData, get_group, router_sucker)
