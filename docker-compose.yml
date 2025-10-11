@@ -33,39 +33,5 @@ services:
     depends_on:
       - api_1
 
-  api_2:
-    build: .
-    container_name: api_2
-    restart: always
-    environment:
-      - TENTACULA__WEB__PORT=8002
-    expose:
-      - "8002"
-    volumes:
-      - .:/app/tentacula
-
-  nginx_2:
-    image: nginx:1.25
-    container_name: nginx_2
-    volumes:
-      - ./nginx/default2.conf:/etc/nginx/conf.d/default.conf:ro
-      - ./certs:/etc/nginx/certs:ro   # монтируем локальную ./certs в /etc/nginx/certs
-    ports:
-      - "5002:5002"
-    depends_on:
-      - api_2
-
-  db_tent:
-    image: "postgres:15"
-    container_name: db_tent
-    environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: tentacula
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-
 volumes:
     pgdata:

@@ -1,4 +1,4 @@
-from _ds_dict import DSDict
+from ds.ds_dict import DSDict
 
 ATTR_TYPES = DSDict({
     "addressBookRoots": ("2.5.5.1", False),

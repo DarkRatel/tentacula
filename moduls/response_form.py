@@ -3,5 +3,5 @@ from typing import Any, Optional
 
 class ResponseFrom(BaseModel):
     username: str
-    status: str
+    successfully: bool
     answer: Optional[Any]

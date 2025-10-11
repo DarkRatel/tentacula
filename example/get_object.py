@@ -6,11 +6,15 @@ transport = httpx.HTTPTransport(verify=ssl_ctx)
 client = httpx.Client(transport=transport)
 
 response = client.post(
-    "https://nginx_1:5001/sucker/first",
+    "https://nginx_1:5001/sucker/get_object",
     json={
-        'username': 'sco-ad',
-        'password': '1234556',
-        'ldap_filer': "(samaccountname=vtb1234556)"
+        'login': 'api_1',
+        'password': 'Cakn2o9xcJIeio2fi3mP)@!I!',
+        'host': '192.168.0.114',
+        'port': 389,
+
+        'identity': 'CN=Administrator,CN=Users,DC=contoso,DC=local',
+        'type_object': 'user'
     }
 )
 
@@ -18,3 +22,8 @@ response.raise_for_status()
 print("#########################")
 j = response.json()
 print(j)
+print("----------")
+print(j['answer'])
+
+# DSHook( ) as ds:
+#     v = ds.get_object()

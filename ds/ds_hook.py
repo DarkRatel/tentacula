@@ -3,23 +3,24 @@ from datetime import datetime
 
 import ldap
 
-from _ds_dict import DSDict
-from data import DataDSLDAP, DataDSProperties
-from func_read_ds import search_object, identity_to_id, ATTR_EXTEND
-from ds_function import search_root_dse
+from ds.ds_dict import DSDict
+from ds.data import DataDSLDAP, DataDSProperties
+from ds.func_ds_get import search_object, identity_to_id, ATTR_EXTEND
+from ds.ds_function import search_root_dse
 
+DS_TYPE_SCOPE = typing.Literal["base", "onelevel", "subtree"]
 DS_TYPE_OBJECT = typing.Literal["object", "user", "group", "computer", "contact"]
 DS_GROUP_SCOPE = typing.Literal["DomainLocal", "Global", "Universal"]
 DS_GROUP_CATEGORY = typing.Literal["Security", "Distribution"]
 
 
 class DSHook:
-    def __init__(self, login: str, password: str, host: str, port: int = 636, dry_run: bool = False,
-                 search_base: str = None):
+    def __init__(self, login: str, password: str, host: str, port: int = 636, base: str = None,
+                 dry_run: bool = False):
 
         self._login = login
         self._password = password
-        self.search_base = search_base
+        self.base = base
 
         if port == 636:
             prefix = 'ldaps'
@@ -42,7 +43,7 @@ class DSHook:
     def __enter__(self):
         print(f"Run LDAP Connect: {self.connect_line}, login: {self._login}")
         self._connect.simple_bind_s(self._login, self._password)
-        self._search_base = self.search_base if self.search_base else search_root_dse(connect=self._connect)
+        self.base = self.base if self.base else search_root_dse(connect=self._connect)
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -51,7 +52,7 @@ class DSHook:
 
     def get_object(
             self, identity: str | DSDict = None, ldap_filter: str = None,
-            properties: str | list | tuple = None, search_scope: int = ldap.SCOPE_SUBTREE,
+            properties: str | list | tuple = None, search_scope: DS_TYPE_SCOPE = "subtree",
             type_object: DS_TYPE_OBJECT = "object"
     ) -> list[DSDict]:
 
@@ -88,7 +89,7 @@ class DSHook:
             result = search_object(
                 connect=self._connect,
                 ldap_filter=identity_to_id(identity, type_object=type_object),
-                search_base=self._search_base,
+                search_base=self.base,
                 search_scope=search_scope,
                 properties=properties,
                 properties_shadow=properties_shadow,
@@ -99,7 +100,7 @@ class DSHook:
             result = search_object(
                 connect=self._connect,
                 ldap_filter=ldap_filter,
-                search_base=self._search_base,
+                search_base=self.base,
                 search_scope=search_scope,
                 properties=properties,
                 properties_shadow=properties_shadow,
@@ -112,34 +113,50 @@ class DSHook:
 
     def get_user(
             self, identity: str | DSDict = None, ldap_filter: str = None,
-            properties: str | list | tuple = None, search_scope: int = ldap.SCOPE_SUBTREE
+            properties: str | list | tuple = None, search_scope: DS_TYPE_SCOPE = "subtree"
     ) -> list[DSDict]:
         return self.get_object(identity=identity, ldap_filter=ldap_filter, properties=properties,
                                search_scope=search_scope, type_object="user")
 
     def get_group(
             self, identity: str | DSDict = None, ldap_filter: str = None,
-            properties: str | list | tuple = None, search_scope: int = ldap.SCOPE_SUBTREE
+            properties: str | list | tuple = None, search_scope: DS_TYPE_SCOPE = "subtree"
     ) -> list[DSDict]:
         return self.get_object(identity=identity, ldap_filter=ldap_filter, properties=properties,
                                search_scope=search_scope, type_object="group")
 
     def get_computer(
             self, identity: str | DSDict = None, ldap_filter: str = None,
-            properties: str | list | tuple = None, search_scope: int = ldap.SCOPE_SUBTREE
+            properties: str | list | tuple = None, search_scope: DS_TYPE_SCOPE = "subtree"
     ) -> list[DSDict]:
         return self.get_object(identity=identity, ldap_filter=ldap_filter, properties=properties,
                                search_scope=search_scope, type_object="computer")
 
     def get_contact(
             self, identity: str | DSDict = None, ldap_filter: str = None,
-            properties: str | list | tuple = None, search_scope: int = ldap.SCOPE_SUBTREE
+            properties: str | list | tuple = None, search_scope: DS_TYPE_SCOPE = "subtree"
     ) -> list[DSDict]:
         return self.get_object(identity=identity, ldap_filter=ldap_filter, properties=properties,
                                search_scope=search_scope, type_object="contact")
 
     def get_group_member(self, identity: str | DSDict):
-        pass
+        result = search_object(
+            connect=self._connect,
+            ldap_filter=identity_to_id(identity, type_object='group'),
+            search_base=self.base,
+            properties=None,
+            type_object='group',
+            only_one=True
+        )[0]
+
+        return search_object(
+            connect=self._connect,
+            ldap_filter=f"(memberOf={result['distinguishedName']})",
+            search_base=self.base,
+            properties=DataDSProperties['MEMBER'].value,
+            type_object='object',
+            only_one=False
+        )
 
     def set_object(self, identity: str | DSDict, remove: dict = None, add: dict[str, list] = None,
                    replace: dict[str, list] = None, clear: list[str] = None, display_name: str = None):

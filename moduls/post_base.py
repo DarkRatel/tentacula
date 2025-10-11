@@ -14,8 +14,8 @@ from systems.logging import logger
 from systems.config import AppConfig
 
 
-def create_post(path_name: str, base_model: type(BaseModel),
-                func: Callable[..., Union[int, str, float, dict, bool]], router: APIRouter):
+def create_post(path_name: str, base_model: BaseModel,
+                func: Callable[..., Union[int, str, float, list, tuple, dict, bool, None]], router: APIRouter):
     """Функция генерации присосок"""
 
     p_name = '/' if path_name == '/' else f"/{path_name}"
@@ -29,10 +29,9 @@ def create_post(path_name: str, base_model: type(BaseModel),
             log_capture = StringIO()
             local_handler = logging.StreamHandler(log_capture)
             local_handler.setFormatter(
-                logging.Formatter('[%(asctime)s] %(levelname)s - %(message)s'))  # Без времени/уровня
+                logging.Formatter('[%(asctime)s] %(levelname)s - %(message)s'))
             logger.addHandler(local_handler)
 
-            result = False
             run_id = uuid.uuid4()
 
             try:
@@ -60,10 +59,11 @@ def create_post(path_name: str, base_model: type(BaseModel),
 
                 logger.info(f"DONE")
 
-                status_ = 'ok'
-            except RuntimeError as e:
+                successfully = True
+            except Exception as e:
                 logger.error(f"ERROR: {e}")
-                status_ = 'failed'
+                successfully = False
+                result = str(e)
             finally:
                 # Получение логово из буфера
                 local_handler.flush()
@@ -85,7 +85,7 @@ def create_post(path_name: str, base_model: type(BaseModel),
                         file.write(f"{item}\n")
 
             return JSONResponse(
-                ResponseFrom(username=str(user), status=status_, answer=result).model_dump(),
+                ResponseFrom(username=str(user), successfully=successfully, answer=result).model_dump(),
                 status_code=status.HTTP_200_OK
             )
 

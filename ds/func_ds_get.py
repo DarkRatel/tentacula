@@ -8,11 +8,11 @@ import ldap
 import ldap.filter
 from ldap.controls.libldap import SimplePagedResultsControl
 
-from data import DataDSLDAP
-from _ds_dict import DSDict
-from _attributes_type import ATTR_TYPES
-from _convertors_value import convert_uac, convert_grouptype, convert_object_class
-from ds_function import search_attribute_range
+from ds.data import DataDSLDAP
+from ds.ds_dict import DSDict
+from ds._attributes_type import ATTR_TYPES
+from ds._convertors_value import convert_uac, convert_grouptype, convert_object_class
+from ds.ds_function import search_attribute_range
 
 TYPE_HANDLERS = {
     # Distinguished Name (DN, ссылка на другой объект AD).
@@ -91,15 +91,13 @@ def object_processing(connect, data, properties, properties_shadow):
                 if properties[0] == '*' or new_key.lower() in map(str.lower, properties):
                     result[new_key] = transform(result[attr])
 
-    for attr in properties_shadow:
-        if attr in result:
-            result.pop(attr)
+    [result.pop(attr) for attr in properties_shadow if attr in result]
 
     return result
 
 
-def search_object(connect, ldap_filter, search_base, search_scope, properties, properties_shadow: list,
-                  type_object, only_one: bool = False):
+def search_object(connect, ldap_filter, search_base, properties, type_object, search_scope = ldap.SCOPE_SUBTREE,
+                  properties_shadow: list = None, only_one: bool = False):
     ldap_filter = DataDSLDAP[type_object.upper()].unit(ldap_filter)
 
     if only_one and '*' in ldap_filter:
