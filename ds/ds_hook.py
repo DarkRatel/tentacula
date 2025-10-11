@@ -61,6 +61,11 @@ class DSHook:
         # groupType: GroupScope, GroupCategory
         # pwdLastSet: ChangePasswordAtLogon
 
+        # properties_shadow = []
+        #
+        # if properties:
+
+
         properties_shadow = []
         if properties:
             if isinstance(properties, str):
@@ -139,7 +144,7 @@ class DSHook:
         return self.get_object(identity=identity, ldap_filter=ldap_filter, properties=properties,
                                search_scope=search_scope, type_object="contact")
 
-    def get_group_member(self, identity: str | DSDict):
+    def get_group_member(self, identity: str | DSDict) -> list[DSDict]:
         result = search_object(
             connect=self._connect,
             ldap_filter=identity_to_id(identity, type_object='group'),
@@ -159,72 +164,73 @@ class DSHook:
         )
 
     def set_object(self, identity: str | DSDict, remove: dict = None, add: dict[str, list] = None,
-                   replace: dict[str, list] = None, clear: list[str] = None, display_name: str = None):
+                   replace: dict[str, list] = None, clear: list[str] = None, display_name: str = None) -> None:
         pass
 
     def set_user(self, identity: str | DSDict, remove: dict = None, add: dict[str, list] = None,
                  replace: dict[str, list] = None, clear: list[str] = None, display_name: str = None,
                  samaccountname: str = None, userprincipalname: str = None, enabled: bool = None,
                  password_never_expires: bool = None, account_not_delegated: bool = None,
-                 change_password_at_logon: bool = None, account_expiration_date: bool | datetime = None):
+                 change_password_at_logon: bool = None, account_expiration_date: bool | datetime = None) -> None:
         pass
 
     def set_group(self, identity: str | DSDict, remove: dict = None, add: dict[str, list] = None,
                   replace: dict[str, list] = None, clear: list[str] = None, display_name: str = None,
-                  group_scope: DS_GROUP_SCOPE = None, group_category: DS_GROUP_CATEGORY = None):
+                  group_scope: DS_GROUP_SCOPE = None, group_category: DS_GROUP_CATEGORY = None) -> None:
         pass
 
     def set_computer(self, identity: str | DSDict, remove: dict = None, add: dict[str, list] = None,
-                     replace: dict[str, list] = None, clear: list[str] = None, display_name: str = None):
+                     replace: dict[str, list] = None, clear: list[str] = None, display_name: str = None) -> None:
         pass
 
     def set_contact(self, identity: str | DSDict, remove: dict = None, add: dict[str, list] = None,
-                    replace: dict[str, list] = None, clear: list[str] = None, display_name: str = None):
+                    replace: dict[str, list] = None, clear: list[str] = None, display_name: str = None) -> None:
         pass
 
-    def set_account_password(self, identity: str | DSDict, password: str):
+    def set_account_password(self, identity: str | DSDict, account_password: str) -> None:
         pass
 
-    def set_account_unlock(self, identity: str | DSDict):
+    def set_account_unlock(self, identity: str | DSDict) -> None:
         pass
 
-    def add_group_member(self, identity: str | DSDict, members: str | DSDict | list[str] | tuple[str] | list[DSDict]):
+    def add_group_member(self, identity: str | DSDict, members: str | DSDict | list[str] | tuple[str] | list[DSDict]
+                         ) -> None:
         pass
 
     def remove_group_member(self, identity: str | DSDict,
-                            members: str | DSDict | list[str] | tuple[str] | list[DSDict]):
+                            members: str | DSDict | list[str] | tuple[str] | list[DSDict]) -> None:
         pass
 
-    def move_object(self, identity: str | DSDict, target_path: str):
+    def move_object(self, identity: str | DSDict, target_path: str) -> None:
         pass
 
-    def rename_object(self, identity: str | DSDict, new_name: str):
+    def rename_object(self, identity: str | DSDict, new_name: str) -> None:
         pass
 
-    def new_user(self, path: str, name: str, samaccountname: str, password: str, userprincipalname: str = None,
+    def new_user(self, path: str, name: str, samaccountname: str, account_password: str, userprincipalname: str = None,
                  enabled: bool = None, password_never_expires: bool = None, account_not_delegated: bool = None,
                  change_password_at_logon: bool = None, account_expiration_date: bool | datetime = None,
-                 other_attributes: dict[str, list] = None):
+                 other_attributes: dict[str, list] = None) -> None:
         pass
 
     def new_group(self, path: str, name: str, group_scope: DS_GROUP_SCOPE, group_category: DS_GROUP_CATEGORY,
-                  other_attributes: dict[str, list] = None):
+                  other_attributes: dict[str, list] = None) -> None:
         pass
 
-    def new_contact(self, path: str, name: str, other_attributes: dict[str, list] = None):
+    def new_contact(self, path: str, name: str, other_attributes: dict[str, list] = None) -> None:
         pass
 
-    def remove_object(self, identity: str | DSDict):
+    def remove_object(self, identity: str | DSDict) -> None:
         pass
 
-    def remove_user(self, identity: str | DSDict):
+    def remove_user(self, identity: str | DSDict) -> None:
         pass
 
-    def remove_group(self, identity: str | DSDict):
+    def remove_group(self, identity: str | DSDict) -> None:
         pass
 
-    def remove_computer(self, identity: str | DSDict):
+    def remove_computer(self, identity: str | DSDict) -> None:
         pass
 
-    def remove_contact(self, identity: str | DSDict):
+    def remove_contact(self, identity: str | DSDict) -> None:
         pass
