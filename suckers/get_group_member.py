@@ -15,11 +15,11 @@ class SpecData(BaseModel):
     port: int = 636
     base: str = None
 
-    identity: str | Type[DSDict] = None
+    identity: str | Type[DSDict]
 
 
-def get_group_member(login: str, password: str, host: str, port: int = 636, base: str = None,
-                     identity: str | DSDict = None):
+def get_group_member(login: str, password: str, host: str, identity: str | DSDict,
+                     port: int = 636, base: str = None):
     with DSHook(
             login=login,
             password=password,
