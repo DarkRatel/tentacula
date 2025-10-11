@@ -33,7 +33,7 @@ def set_object(login: str, password: str, host: str, port: int = 636, base: str 
             port=port,
             base=base,
     ) as ds:
-        result = ds.set_object(
+        ds.set_object(
             identity=identity,
             remove=remove,
             add=add,
@@ -41,8 +41,6 @@ def set_object(login: str, password: str, host: str, port: int = 636, base: str 
             clear=clear,
             display_name=display_name
         )
-
-    return result
 
 
 create_post("set_object", SpecData, set_object, router_sucker)
