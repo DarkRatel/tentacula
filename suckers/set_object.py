@@ -15,7 +15,7 @@ class SpecData(BaseModel):
     port: int = 636
     base: str = None
 
-    identity: str | Type[DSDict] = None
+    identity: str | Type[DSDict]
     remove: dict = None
     add: dict[str, list] = None
     replace: dict[str, list] = None
@@ -23,8 +23,8 @@ class SpecData(BaseModel):
     display_name: str = None
 
 
-def set_object(login: str, password: str, host: str, port: int = 636, base: str = None,
-               identity: str | DSDict = None, remove: dict = None, add: dict[str, list] = None,
+def set_object(login: str, password: str, host: str, identity: str | DSDict, port: int = 636,
+               base: str = None, remove: dict = None, add: dict[str, list] = None,
                replace: dict[str, list] = None, clear: list[str] = None, display_name: str = None):
     with DSHook(
             login=login,
