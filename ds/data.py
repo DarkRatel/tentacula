@@ -30,7 +30,7 @@ class DataDSProperties(Enum):
     """
     OBJECT = ["distinguishedName", "Name", "ObjectClass", "ObjectGUID"]
     USER = ["distinguishedName", "Name", "ObjectClass", "ObjectGUID", "GivenName", "sAMAccountName", "objectSid",
-            "Surname", "UserPrincipalName", "Enabled"]
+            "sn", "UserPrincipalName", "Enabled"]
     GROUP = ["distinguishedName", "Name", "ObjectClass", "ObjectGUID", "sAMAccountName", "objectSid", "GroupScope",
              "GroupCategory"]
     COMPUTER = ["distinguishedName", "Name", "ObjectClass", "ObjectGUID", "DNSHostName", "Enabled", "sAMAccountName",

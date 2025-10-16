@@ -61,30 +61,29 @@ class DSHook:
         # groupType: GroupScope, GroupCategory
         # pwdLastSet: ChangePasswordAtLogon
 
-        # properties_shadow = []
-        #
-        # if properties:
-
-
-        properties_shadow = []
         if properties:
             if isinstance(properties, str):
                 properties = [properties]
 
-            properties += [i for i in DataDSProperties[type_object.upper()].value
-                           if i.lower() not in map(str.lower, properties)]
+            if '*' in properties:
+                if len(properties) != 1:
+                    raise RuntimeError("При запросе всех атрибутов может быть только один знак *")
+            else:
+                properties = list(set([i.casefold() for i in properties]))
+                properties += [i for i in DataDSProperties[type_object.upper()].value if i.casefold() not in properties]
+
         else:
-            properties = DataDSProperties[type_object.upper()].value
+            properties = list(set([i.casefold() for i in DataDSProperties[type_object.upper()].value]))
 
-        if '*' in properties:
-            if len(properties) != 1:
-                raise RuntimeError("При запросе всех атрибутов может быть только один знак *")
-
+        properties_shadow = []
         for attr, attr_ext in ATTR_EXTEND.items():
-            if attr.lower() in map(str.lower, properties):
+            # Если доп. атрибут запрошен,
+            if attr.lower() in properties:
                 continue
+
+            # Перебор доплнительных
             for (name_ext, _) in attr_ext:
-                if properties[0] == '*' or name_ext.lower() in map(str.lower, properties):
+                if properties[0] == '*' or name_ext.lower() in properties:
                     properties_shadow += [attr]
                     break
 
@@ -164,27 +163,61 @@ class DSHook:
         )
 
     def set_object(self, identity: str | DSDict, remove: dict = None, add: dict[str, list] = None,
-                   replace: dict[str, list] = None, clear: list[str] = None, display_name: str = None) -> None:
-        pass
+                   replace: dict[str, list] = None, clear: list[str] = None, displayname: str = None,
+                   description: str = None) -> None:
+        """
+        Последовательность исполнений: remove, add, replace, clear
+        :param remove: Удалить одно из значений в атрибуте.
+        :param add: Добавить значение в атрибут.
+        :param replace: Полная замена всех значений.
+        :param clear: Очистка в атрибуте.
+        """
+        #
+        # if remove:
+        #     for i in
+        # if add:
+        #
+        # if replace:
+        #
+        # if clear:
+        #
+        # if displayname:
+        #
+        # if description:
+
+
+        result = search_object(
+            connect=self._connect,
+            ldap_filter=identity_to_id(identity, type_object='object'),
+            search_base=self.base,
+            properties=None,
+            type_object='object',
+            only_one=True
+        )[0]
+
+        if
 
     def set_user(self, identity: str | DSDict, remove: dict = None, add: dict[str, list] = None,
-                 replace: dict[str, list] = None, clear: list[str] = None, display_name: str = None,
-                 samaccountname: str = None, userprincipalname: str = None, enabled: bool = None,
-                 password_never_expires: bool = None, account_not_delegated: bool = None,
+                 replace: dict[str, list] = None, clear: list[str] = None, displayname: str = None,
+                 description: str = None, samaccountname: str = None, userprincipalname: str = None,
+                 enabled: bool = None, password_never_expires: bool = None, account_not_delegated: bool = None,
                  change_password_at_logon: bool = None, account_expiration_date: bool | datetime = None) -> None:
         pass
 
     def set_group(self, identity: str | DSDict, remove: dict = None, add: dict[str, list] = None,
-                  replace: dict[str, list] = None, clear: list[str] = None, display_name: str = None,
+                  replace: dict[str, list] = None, clear: list[str] = None, displayname: str = None,
+                  description: str = None,
                   group_scope: DS_GROUP_SCOPE = None, group_category: DS_GROUP_CATEGORY = None) -> None:
         pass
 
     def set_computer(self, identity: str | DSDict, remove: dict = None, add: dict[str, list] = None,
-                     replace: dict[str, list] = None, clear: list[str] = None, display_name: str = None) -> None:
+                     replace: dict[str, list] = None, clear: list[str] = None, displayname: str = None,
+                     description: str = None) -> None:
         pass
 
     def set_contact(self, identity: str | DSDict, remove: dict = None, add: dict[str, list] = None,
-                    replace: dict[str, list] = None, clear: list[str] = None, display_name: str = None) -> None:
+                    replace: dict[str, list] = None, clear: list[str] = None, displayname: str = None,
+                    description: str = None) -> None:
         pass
 
     def set_account_password(self, identity: str | DSDict, account_password: str) -> None:
