@@ -8,10 +8,10 @@ import ldap
 import ldap.filter
 from ldap.controls.libldap import SimplePagedResultsControl
 
-from ds.data import DataDSLDAP
+from ds.data import DataDSLDAP, DS_TYPE_SCOPE, DS_TYPE_OBJECT, DS_GROUP_SCOPE, DS_GROUP_CATEGORY
 from ds.ds_dict import DSDict
-from ds._attributes_type import ATTR_TYPES
-from ds._convertors_value import convert_uac, convert_grouptype, convert_object_class
+from ds.attributes_type import ATTR_TYPES
+from ds.convertors_value import convert_grouptype, convert_object_class, UAC_FLAGS
 from ds.ds_function import search_attribute_range
 
 TYPE_HANDLERS = {
@@ -56,9 +56,10 @@ ATTR_EXTEND = DSDict({
         ('objectClass', lambda v: convert_object_class(flags=v))
     ],
     "userAccountControl": [
-        ('Enabled', lambda v: False if "ACCOUNTDISABLE" in convert_uac(numeric=v) else True),
-        ('PasswordNeverExpires', lambda v: True if "DONT_EXPIRE_PASSWORD" in convert_uac(numeric=v) else False),
-        ('AccountNotDelegated', lambda v: True if "NOT_DELEGATED" in convert_uac(numeric=v) else False)
+        ('Enabled', lambda v: False if UAC_FLAGS["ACCOUNTDISABLE"] & v else True),
+        ('PasswordNeverExpires', lambda v: True if UAC_FLAGS["DONT_EXPIRE_PASSWORD"] & v else False),
+        ('AccountNotDelegated', lambda v: True if UAC_FLAGS["NOT_DELEGATED"] & v else False),
+        ('PasswordNotRequired', lambda v: True if UAC_FLAGS["PASSWD_NOTREQD"] & v else False),
     ],
     "groupType": [
         ('GroupScope', lambda v: return_groupscope(convert_grouptype(v))),
@@ -86,9 +87,9 @@ def object_processing(connect, data, properties, properties_shadow):
         result[attr] = result[attr] if not action[1] else result[attr][0]
 
     for attr, rules in ATTR_EXTEND.items():
-        if properties[0] == '*' or attr in result:
+        if attr in result:
             for new_key, transform in rules:
-                if properties[0] == '*' or new_key.lower() in map(str.lower, properties):
+                if new_key.lower() in properties or '*' in properties:
                     result[new_key] = transform(result[attr])
 
     [result.pop(attr) for attr in properties_shadow if attr in result]
@@ -96,19 +97,46 @@ def object_processing(connect, data, properties, properties_shadow):
     return result
 
 
-def search_object(connect, ldap_filter, search_base, properties, type_object, search_scope = ldap.SCOPE_SUBTREE,
-                  properties_shadow: list = None, only_one: bool = False):
+def search_object(connect, ldap_filter, search_base, properties, type_object, search_scope: DS_TYPE_SCOPE = "subtree",
+                  only_one: bool = False):
     ldap_filter = DataDSLDAP[type_object.upper()].unit(ldap_filter)
 
     if only_one and '*' in ldap_filter:
         raise RuntimeError("При точеном поиске недопустим параметр разрешающий нестрогий поиск (*)")
 
-    if '*' not in properties and 'distinguishedName'.lower() not in map(str.lower, properties):
-        properties += ['distinguishedName']
+    if not properties:
+        properties = []
 
-    properties += properties_shadow
+    properties_shadow = []
 
-    print(f"search_base: {search_base}, search_scope: {search_scope}, "
+    if '*' not in properties:
+        if 'distinguishedName'.lower() not in properties:
+            properties += ['distinguishedName']
+        if 'distinguishedName'.lower() not in properties:
+            properties += ['objectClass']
+
+        for attr, attr_ext in ATTR_EXTEND.items():
+            # Если дополнительный атрибут запрошен, пропускается
+            if attr.lower() in properties:
+                continue
+
+            # Перебор дополнительных атрибутов
+            for (name_ext, _) in attr_ext:
+                if name_ext.lower() in properties:
+                    properties_shadow += [attr.lower()]
+                    properties += [attr.lower()]
+                    break
+
+    if search_scope == "subtree":
+        search_scope = ldap.SCOPE_SUBTREE
+    elif search_scope == "onelevel":
+        search_scope = ldap.SCOPE_ONELEVEL
+    elif search_scope == "base":
+        search_scope = ldap.SCOPE_BASE
+    else:
+        raise RuntimeError(f"Неизвестный тип области поиска: {search_scope}")
+
+    print(f"Get {type_object}: search_base: {search_base}, search_scope: {search_scope}, "
           f"ldap_filter: {ldap_filter}, properties: {properties}")
 
     req_ctrl = SimplePagedResultsControl(criticality=False, size=1499, cookie='')
@@ -117,10 +145,9 @@ def search_object(connect, ldap_filter, search_base, properties, type_object, se
         base=search_base,
         scope=search_scope,
         filterstr=ldap_filter,
-        attrlist=properties + properties_shadow,
+        attrlist=properties,
         serverctrls=[req_ctrl],
     )
-
     total_results = []
     pages = 0
     while True:
@@ -141,7 +168,7 @@ def search_object(connect, ldap_filter, search_base, properties, type_object, se
                     base=search_base,
                     scope=search_scope,
                     filterstr=ldap_filter,
-                    attrlist=properties + properties_shadow,
+                    attrlist=properties,
                     serverctrls=[req_ctrl],
                 )
             else:
@@ -157,26 +184,29 @@ def search_object(connect, ldap_filter, search_base, properties, type_object, se
     return total_results
 
 
-def identity_to_id(identity: str | DSDict, force_search: bool = False,
-                   type_object: typing.Literal["object", "user", "group", "computer", "contact"] = "object") -> str:
+def gen_filter_to_id(identity: str | DSDict, type_object: DS_TYPE_OBJECT = "object",
+                     return_dict: bool = False) -> str | DSDict:
     search_line: str
 
     if isinstance(identity, str):
         if re.search(r'^cn=|^ou=|^dc=', identity.lower()):
-            identity = {"distinguishedName": identity}
+            identity = DSDict({"distinguishedName": identity})
         # Если передан GUID, формируется LDAP-фильтр для поиска объекта
         elif re.search(r'^[{]?[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}[}]?$', identity.lower()):
-            identity = {"objectGUID": identity}
+            identity = DSDict({"objectGUID": identity})
         # Если передан SID, формируется LDAP-фильтр для поиска объекта
-        elif "s-1-5" in identity.lower() and type_object in ["user", "computer", "group"]:
-            identity = {"objectSid": identity}
+        elif "s-1-5" in identity.lower() and type_object in ["user", "computer", "group", "member"]:
+            identity = DSDict({"objectSid": identity})
         # Если передан текст, то будет совершена попытка искать этот текст в атрибуте sAMAccountName
-        elif type_object in ["user", "computer", "group"]:
-            identity = {"sAMAccountName": identity}
+        elif type_object in ["user", "computer", "group", "member"]:
+            identity = DSDict({"sAMAccountName": identity})
         else:
             raise RuntimeError(f"Ошибка определения способа поиска объекта в службе каталогов для значения: {identity}")
 
-    if 'sAMAccountName' in identity and type_object in ["user", "computer", "group"]:
+    if return_dict:
+        return identity
+
+    if 'sAMAccountName' in identity and type_object in ["user", "computer", "group", "member"]:
         search_line = f"(sAMAccountName={identity['sAMAccountName']})"
     elif 'distinguishedName' in identity:
         search_line = f"(distinguishedName={ldap.filter.escape_filter_chars(identity['distinguishedName'])})"
