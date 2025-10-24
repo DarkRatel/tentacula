@@ -1,24 +1,19 @@
-uvicorn==0.37.0
-fastapi[all]==0.118.0
-passlib[bcrypt]==1.7.4 # Хеширование паролей
-bcrypt==5.0.0 # Хеширование паролей
-pyjwt[crypto]==2.10.1 # Работы с JWT-токенами
-pydantic==2.11.10  # Для формирование атрибутов читаемых из запросов
+uvicorn==0.38.0
+fastapi[all]==0.120.0
+starlette==0.48.0
+pydantic==2.12.3  # Для формирование атрибутов читаемых из запросов
 apscheduler==3.11.0  # Приложение для шедуллера запускающего события по расписнаию
 dotenv==0.9.9  # Чтение переменных окружения
 
-SQLAlchemy==2.0.43 # Работа с БД
-psycopg2-binary==2.9.10 # Расширения для работы с PostgreSQL
+SQLAlchemy==2.0.44 # Работа с БД
+psycopg2-binary==2.9.11 # Расширения для работы с PostgreSQL
 asyncpg==0.30.0 # Работа с асинхронностью БД
 
-requests~=2.32.4
 httpx==0.28.1
-python-dotenv~=1.1.1
-starlette==0.48.0
-httptools==0.6.4
+python-dotenv==1.1.1
+httptools==0.7.1
 jinja2==3.1.6
 
-pip-system-certs==5.2
+pip-system-certs==5.3
 
-python-ldap==3.4.4 # Для работы с запросами к DS
-
+python-ldap==3.4.5 # Для работы с запросами к DS
