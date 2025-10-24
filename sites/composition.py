@@ -1,5 +1,3 @@
-import requests
-
 from fastapi import APIRouter
 from pydantic import BaseModel
 import httpx, ssl
