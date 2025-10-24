@@ -1,5 +1,11 @@
+import typing
 from enum import Enum
 
+DS_TYPE_SCOPE = typing.Literal["base", "onelevel", "subtree"]
+DS_TYPE_OBJECT = typing.Literal["object", "user", "group", "computer", "contact", "member"]
+DS_GROUP_SCOPE = typing.Literal["DomainLocal", "Global", "Universal"]
+DS_GROUP_CATEGORY = typing.Literal["Security", "Distribution"]
+DS_ACTION_MEMBER = typing.Literal["add", "remove"]
 
 class DataDSLDAP(Enum):
     """
