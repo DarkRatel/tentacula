@@ -1,3 +1,4 @@
+import json
 import uuid
 from typing import Callable, Union
 from io import StringIO
@@ -12,6 +13,13 @@ from moduls.auth.auth_manager import current_user, User
 from moduls.response_form import ResponseFrom
 from systems.logging import logger
 from systems.config import AppConfig
+
+
+def json_serial(obj):
+    """JSON serializer for objects not serializable by default json code"""
+    if isinstance(obj, datetime):
+        return obj.isoformat()
+    raise TypeError(f"Object of type {obj.__class__.__name__} is not JSON serializable")
 
 
 def create_post(path_name: str, base_model: BaseModel,
@@ -39,11 +47,12 @@ def create_post(path_name: str, base_model: BaseModel,
                 logger.info(f"UID RUN: {run_id}")
                 logger.info(f"URL: {request.url}")
 
-                logger.info(f"Protocol: {request.headers["x-forwarded-proto"].upper()}, "
-                            f"Host name: {request.headers["host"]}, "
-                            f"Host ip: {request.headers["x-server-ip"]}")
+                logger.info(f"Protocol: {request.headers['x-forwarded-proto'].upper()}, "
+                            f"Host name: {request.headers['host']}, "
+                            f"Host ip: {request.headers['x-server-ip']}, "
+                            f"Request-ID: {request.headers['x-request-id']}")
 
-                logger.info(f"Client ip: {request.headers.get("x-forwarded-for")}")
+                logger.info(f"Client ip: {request.headers.get('x-forwarded-for')}")
 
                 subject = request.headers.get("x-client-subject")
                 serial = request.headers.get("x-client-serial")
@@ -55,6 +64,7 @@ def create_post(path_name: str, base_model: BaseModel,
                 [logger.info({r: v}) for r, v in data.model_dump().items()]
                 logger.info("======Function======")
                 result = func(**data.model_dump())
+                result = json.dumps(result, default=json_serial)
                 logger.info("====================")
 
                 logger.info(f"DONE")
