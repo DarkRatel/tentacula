@@ -4,8 +4,7 @@ from pydantic import BaseModel
 
 from moduls.post_base import create_post
 from sites.suckers import router_sucker
-from ds.ds_dict import DSDict
-from ds.ds_hook import DSHook, DS_GROUP_SCOPE, DS_GROUP_CATEGORY
+from ds import DSDict, DSHook, DS_GROUP_SCOPE, DS_GROUP_CATEGORY
 
 
 class SpecData(BaseModel):
@@ -30,13 +29,7 @@ def set_group(login: str, password: str, host: str, identity: str | DSDict, port
               add: dict[str, list] = None,
               replace: dict[str, list] = None, clear: list[str] = None, display_name: str = None,
               group_scope: DS_GROUP_SCOPE = None, group_category: DS_GROUP_CATEGORY = None):
-    with DSHook(
-            login=login,
-            password=password,
-            host=host,
-            port=port,
-            base=base,
-    ) as ds:
+    with DSHook(login=login, password=password, host=host, port=port, base=base) as ds:
         ds.set_group(
             identity=identity,
             remove=remove,

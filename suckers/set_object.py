@@ -4,8 +4,7 @@ from pydantic import BaseModel
 
 from moduls.post_base import create_post
 from sites.suckers import router_sucker
-from ds.ds_dict import DSDict
-from ds.ds_hook import DSHook, DS_TYPE_OBJECT, DS_TYPE_SCOPE
+from ds import DSDict, DSHook
 
 
 class SpecData(BaseModel):
@@ -26,13 +25,7 @@ class SpecData(BaseModel):
 def set_object(login: str, password: str, host: str, identity: str | DSDict, port: int = 636,
                base: str = None, remove: dict = None, add: dict[str, list] = None,
                replace: dict[str, list] = None, clear: list[str] = None, display_name: str = None):
-    with DSHook(
-            login=login,
-            password=password,
-            host=host,
-            port=port,
-            base=base,
-    ) as ds:
+    with DSHook(login=login, password=password, host=host, port=port, base=base) as ds:
         ds.set_object(
             identity=identity,
             remove=remove,

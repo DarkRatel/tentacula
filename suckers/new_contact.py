@@ -1,11 +1,8 @@
-from typing import Type
-from datetime import datetime
 from pydantic import BaseModel
 
 from moduls.post_base import create_post
 from sites.suckers import router_sucker
-from ds.ds_dict import DSDict
-from ds.ds_hook import DSHook
+from ds import DSHook
 
 
 class SpecData(BaseModel):
@@ -22,18 +19,11 @@ class SpecData(BaseModel):
 
 def new_contact(login: str, password: str, host: str, path: str, name: str, other_attributes: dict[str, list] = None,
                 port: int = 636, base: str = None):
-    with DSHook(
-            login=login,
-            password=password,
-            host=host,
-            port=port,
-            base=base,
-    ) as ds:
+    with DSHook(login=login, password=password, host=host, port=port, base=base) as ds:
         ds.new_contact(
             path=path,
             name=name,
             other_attributes=other_attributes
-
         )
 
 
