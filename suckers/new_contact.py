@@ -9,7 +9,6 @@ class SpecData(BaseModel):
     login: str
     password: str
     host: str
-    port: int = 636
     base: str = None
 
     path: str
@@ -18,8 +17,8 @@ class SpecData(BaseModel):
 
 
 def new_contact(login: str, password: str, host: str, path: str, name: str, other_attributes: dict[str, list] = None,
-                port: int = 636, base: str = None):
-    with DSHook(login=login, password=password, host=host, port=port, base=base) as ds:
+                base: str = None):
+    with DSHook(login=login, password=password, host=host, port=636, base=base) as ds:
         ds.new_contact(
             path=path,
             name=name,

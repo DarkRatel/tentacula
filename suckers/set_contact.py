@@ -10,7 +10,6 @@ class SpecData(BaseModel):
     login: str
     password: str
     host: str
-    port: int = 636
     base: str = None
 
     identity: str | Type[DSDict]
@@ -21,10 +20,10 @@ class SpecData(BaseModel):
     display_name: str = None
 
 
-def set_contact(login: str, password: str, host: str, identity: str | DSDict, port: int = 636, base: str = None,
+def set_contact(login: str, password: str, host: str, identity: str | DSDict, base: str = None,
                 remove: dict = None, add: dict[str, list] = None,
                 replace: dict[str, list] = None, clear: list[str] = None, display_name: str = None):
-    with DSHook(login=login, password=password, host=host, port=port, base=base) as ds:
+    with DSHook(login=login, password=password, host=host, port=636, base=base) as ds:
         ds.set_contact(
             identity=identity,
             remove=remove,

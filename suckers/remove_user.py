@@ -10,15 +10,14 @@ class SpecData(BaseModel):
     login: str
     password: str
     host: str
-    port: int = 636
     base: str = None
 
     identity: str | Type[DSDict]
 
 
 def remove_user(login: str, password: str, host: str, identity: str | DSDict,
-                port: int = 636, base: str = None):
-    with DSHook(login=login, password=password, host=host, port=port, base=base) as ds:
+                base: str = None):
+    with DSHook(login=login, password=password, host=host, port=636, base=base) as ds:
         ds.remove_user(
             identity=identity
 

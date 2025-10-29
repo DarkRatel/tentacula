@@ -10,7 +10,6 @@ class SpecData(BaseModel):
     login: str
     password: str
     host: str
-    port: int = 636
     base: str = None
 
     path: str
@@ -29,15 +28,9 @@ class SpecData(BaseModel):
 def new_user(login: str, password: str, host: str, path: str, name: str, sam_account_name: str, account_password: str,
              user_principal_name: str = None, enabled: bool = None, password_never_expires: bool = None,
              account_not_delegated: bool = None, change_password_at_logon: bool = None,
-             account_expiration_date: bool | datetime = None, other_attributes: dict[str, list] = None, port: int = 636,
+             account_expiration_date: bool | datetime = None, other_attributes: dict[str, list] = None,
              base: str = None):
-    with DSHook(
-            login=login,
-            password=password,
-            host=host,
-            port=port,
-            base=base,
-    ) as ds:
+    with DSHook(login=login, password=password, host=host, port=636, base=base) as ds:
         ds.new_user(
             path=path,
             name=name,

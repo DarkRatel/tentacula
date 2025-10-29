@@ -10,7 +10,6 @@ class SpecData(BaseModel):
     login: str
     password: str
     host: str
-    port: int = 636
     base: str = None
 
     identity: str | Type[DSDict]
@@ -18,7 +17,7 @@ class SpecData(BaseModel):
 
 def set_account_unlock(login: str, password: str, host: str, identity: str | DSDict,
                        port: int = 636, base: str = None):
-    with DSHook(login=login, password=password, host=host, port=port, base=base) as ds:
+    with DSHook(login=login, password=password, host=host, port=636, base=base) as ds:
         ds.set_account_unlock(
             identity=identity
         )

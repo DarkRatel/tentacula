@@ -10,16 +10,14 @@ class SpecData(BaseModel):
     login: str
     password: str
     host: str
-    port: int = 636
     base: str = None
 
     identity: str | Type[DSDict]
     target_path: str
 
 
-def move_object(login: str, password: str, host: str, identity: str | DSDict, target_path: str,
-                port: int = 636, base: str = None):
-    with DSHook(login=login, password=password, host=host, port=port, base=base) as ds:
+def move_object(login: str, password: str, host: str, identity: str | DSDict, target_path: str, base: str = None):
+    with DSHook(login=login, password=password, host=host, port=636, base=base) as ds:
         ds.move_object(
             identity=identity,
             target_path=target_path

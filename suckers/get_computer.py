@@ -11,7 +11,6 @@ class SpecData(BaseModel):
     login: str
     password: str
     host: str
-    port: int = 636
     base: str = None
 
     identity: str | Type[DSDict] = None
@@ -20,10 +19,10 @@ class SpecData(BaseModel):
     search_scope: DS_TYPE_SCOPE = "subtree"
 
 
-def get_computer(login: str, password: str, host: str, port: int = 636, base: str = None,
-                 identity: str | DSDict = None, ldap_filter: str = None, properties: str | list | tuple = None,
+def get_computer(login: str, password: str, host: str, base: str = None, identity: str | DSDict = None,
+                 ldap_filter: str = None, properties: str | list | tuple = None,
                  search_scope: DS_TYPE_SCOPE = "subtree"):
-    with DSHook(login=login, password=password, host=host, port=port, base=base) as ds:
+    with DSHook(login=login, password=password, host=host, port=636, base=base) as ds:
         result = ds.get_computer(
             identity=identity,
             ldap_filter=ldap_filter,

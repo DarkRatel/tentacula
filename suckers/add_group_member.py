@@ -10,7 +10,6 @@ class SpecData(BaseModel):
     login: str
     password: str
     host: str
-    port: int = 636
     base: str = None
 
     identity: str | Type[DSDict]
@@ -18,9 +17,8 @@ class SpecData(BaseModel):
 
 
 def add_group_member(login: str, password: str, host: str, identity: str | DSDict,
-                     members: str | DSDict | list[str] | tuple[str] | list[DSDict],
-                     port: int = 636, base: str = None):
-    with DSHook(login=login, password=password, host=host, port=port, base=base) as ds:
+                     members: str | DSDict | list[str] | tuple[str] | list[DSDict], base: str = None):
+    with DSHook(login=login, password=password, host=host, port=636, base=base) as ds:
         ds.add_group_member(
             identity=identity,
             members=members
