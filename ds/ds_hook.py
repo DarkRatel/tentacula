@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 
 import ldap
@@ -15,7 +16,21 @@ from .func_ds_set_member import ds_set_member
 
 class DSHook:
     def __init__(self, login: str, password: str, host: str, port: int = 636, base: str = None,
-                 dry_run: bool = False):
+                 dry_run: bool = False, log_level: int = logging.INFO) -> None:
+        """
+        Класс создаёт сессию с DS, в рамках который будет исполнен запрос к каталогу
+        (запрос описывается в рамках наследованных функций).
+
+        Args:
+            login: Логин учётной записи, от имени который создаётся сессия в DS
+            password: Пароль от учётной записи.
+            host: Адрес контроллера домена.
+            port: Порт подключения: 389 или 636 (по умолчанию 636).
+            base: Область каталога. Если не указать, при открытии сессии у DS будет запрошена область работы.
+            dry_run: Формирование запроса, без внесения изменений в DS.
+        """
+
+        self.dry_run = dry_run
 
         self._login = login
         self._password = password
@@ -40,13 +55,34 @@ class DSHook:
 
         self._connect.protocol_version = ldap.VERSION3
 
+        # Создание уникального имени для логов
+        self._logger = logging.getLogger(self.__class__.__name__)
+
+        self._logger.setLevel(log_level)  # Указание уровня логирования
+
+        # Добавляется хендлер только если его нет
+        if not self._logger.handlers:
+            handler = logging.StreamHandler()
+            formatter = logging.Formatter("[%(asctime)s] {%(name)s} %(levelname)s - %(message)s")
+            handler.setFormatter(formatter)
+            self._logger.addHandler(handler)
+            self._logger.propagate = False
+
+        self._logger.debug(f"Создание экземпляра логгира {self.__class__.__name__}")
+
     def __enter__(self):
-        print(f"Run LDAP Connect: {self.connect_line}, login: {self._login}")
+        """Автоматическое открытие сессии"""
+        self._logger.info(f"Run LDAP Connect: {self.connect_line}, login: {self._login}")
+
+        # Открытие сессии с DS
         self._connect.simple_bind_s(self._login, self._password)
+
+        # Если область каталога не определена, производится запрос для установки области работы
         self.base = self.base if self.base else search_root_dse(connect=self._connect)
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        """Автоматическое закрытие сессии"""
         self._connect.unbind_s()
         return False
 
@@ -55,11 +91,19 @@ class DSHook:
             properties: str | list | tuple = None, search_scope: DS_TYPE_SCOPE = "subtree",
             type_object: DS_TYPE_OBJECT = "object"
     ) -> list[DSDict]:
+        """
+        Функция запроса любого объекта из каталога.
 
-        # properties:
-        # userAccountControl: Enabled, PasswordNeverExpires, AccountNotDelegated
-        # groupType: GroupScope, GroupCategory
-        # pwdLastSet: ChangePasswordAtLogon
+        Args:
+            identity: Аргумент для поиска только одного объекта в каталоге (distinguishedName, objectGUID, objectSid, sAMAccountName (для user, group или computer) или словарь объекта DS (DSDict)). Не совместим с ldap_filter.
+            ldap_filter: Аргумент для поиска по LDAP-фильтру. Не совместим с identity.
+            properties: Запрос дополнительных атрибутов. Расширенные атрибуты: Enabled, PasswordNeverExpires, AccountNotDelegated (на основе userAccountControl), GroupScope, GroupCategory (на основе groupType), ChangePasswordAtLogon (на основе pwdLastSet).
+            search_scope: Глубина поиска
+            type_object: К фильтру поиска добавляется фильтр типа объекта
+
+        Returns:
+            Список объектов из DS
+        """
 
         if properties:
             if isinstance(properties, str):
@@ -81,6 +125,7 @@ class DSHook:
         elif identity:
             result = search_object(
                 connect=self._connect,
+                _logger=self._logger,
                 ldap_filter=gen_filter_to_id(identity, type_object=type_object),
                 search_base=self.base,
                 search_scope=search_scope,
@@ -91,6 +136,7 @@ class DSHook:
         elif ldap_filter:
             result = search_object(
                 connect=self._connect,
+                _logger=self._logger,
                 ldap_filter=ldap_filter,
                 search_base=self.base,
                 search_scope=search_scope,
@@ -106,6 +152,18 @@ class DSHook:
             self, identity: str | DSDict = None, ldap_filter: str = None,
             properties: str | list | tuple = None, search_scope: DS_TYPE_SCOPE = "subtree"
     ) -> list[DSDict]:
+        """
+        Функция запроса пользователя из каталога.
+
+        Args:
+            identity: Аргумент для поиска только одного объекта в каталоге (distinguishedName, objectGUID, objectSid, sAMAccountName или словарь объекта DS (DSDict)). Не совместим с ldap_filter.
+            ldap_filter: Аргумент для поиска по LDAP-фильтру. Не совместим с identity.
+            properties: Запрос дополнительных атрибутов. Расширенные атрибуты: Enabled, PasswordNeverExpires, AccountNotDelegated (на основе userAccountControl), ChangePasswordAtLogon (на основе pwdLastSet).
+            search_scope: Глубина поиска
+
+        Returns:
+            Список объектов из DS
+        """
         return self.get_object(identity=identity, ldap_filter=ldap_filter, properties=properties,
                                search_scope=search_scope, type_object="user")
 
@@ -113,6 +171,18 @@ class DSHook:
             self, identity: str | DSDict = None, ldap_filter: str = None,
             properties: str | list | tuple = None, search_scope: DS_TYPE_SCOPE = "subtree"
     ) -> list[DSDict]:
+        """
+        Функция запроса компьютера из каталога DS.
+
+        Args:
+            identity: Аргумент для поиска только одного объекта в каталоге (distinguishedName, objectGUID, objectSid, sAMAccountName или словарь объекта DS (DSDict)). Не совместим с ldap_filter.
+            ldap_filter: Аргумент для поиска по LDAP-фильтру. Не совместим с identity.
+            properties: Запрос дополнительных атрибутов. Расширенные атрибуты: Enabled, PasswordNeverExpires, AccountNotDelegated (на основе userAccountControl), ChangePasswordAtLogon (на основе pwdLastSet).
+            search_scope: Глубина поиска
+
+        Returns:
+            Список объектов из DS
+        """
         return self.get_object(identity=identity, ldap_filter=ldap_filter, properties=properties,
                                search_scope=search_scope, type_object="group")
 
@@ -120,6 +190,18 @@ class DSHook:
             self, identity: str | DSDict = None, ldap_filter: str = None,
             properties: str | list | tuple = None, search_scope: DS_TYPE_SCOPE = "subtree"
     ) -> list[DSDict]:
+        """
+        Функция запроса компьютера из каталога DS.
+
+        Args:
+            identity: Аргумент для поиска только одного объекта в каталоге (distinguishedName, objectGUID, objectSid, sAMAccountName или словарь объекта DS (DSDict)). Не совместим с ldap_filter.
+            ldap_filter: Аргумент для поиска по LDAP-фильтру. Не совместим с identity.
+            properties: Запрос дополнительных атрибутов. Расширенные атрибуты: Enabled, PasswordNeverExpires, AccountNotDelegated (на основе userAccountControl), ChangePasswordAtLogon (на основе pwdLastSet).
+            search_scope: Глубина поиска
+
+        Returns:
+            Список объектов из DS
+        """
         return self.get_object(identity=identity, ldap_filter=ldap_filter, properties=properties,
                                search_scope=search_scope, type_object="computer")
 
@@ -127,10 +209,31 @@ class DSHook:
             self, identity: str | DSDict = None, ldap_filter: str = None,
             properties: str | list | tuple = None, search_scope: DS_TYPE_SCOPE = "subtree"
     ) -> list[DSDict]:
+        """
+        Функция запроса контактов из каталога DS.
+
+        Args:
+            identity: Аргумент для поиска только одного объекта в каталоге (distinguishedName, objectGUID, objectSid или словарь объекта DS (DSDict)). Не совместим с ldap_filter.
+            ldap_filter: Аргумент для поиска по LDAP-фильтру. Не совместим с identity.
+            properties: Запрос дополнительных атрибутов. Расширенные атрибуты: GroupScope, GroupCategory (на основе groupType)
+            search_scope: Глубина поиска
+
+        Returns:
+            Список объектов из DS
+        """
         return self.get_object(identity=identity, ldap_filter=ldap_filter, properties=properties,
                                search_scope=search_scope, type_object="contact")
 
     def get_group_member(self, identity: str | DSDict) -> list[DSDict]:
+        """
+        Функция получения всех членов группы, с дополнительными атрибутами.
+
+        Args:
+            identity: Аргумент принимающий уникальные атрибуты группы для идентификации (distinguishedName, objectGUID, objectSid, sAMAccountName или словарь объекта DS (DSDict)).
+
+        Returns:
+            Список объектов из DS
+        """
         result = search_object(
             connect=self._connect,
             ldap_filter=gen_filter_to_id(identity, type_object='group'),
@@ -145,7 +248,7 @@ class DSHook:
             ldap_filter=f"(memberOf={result['distinguishedName']})",
             search_base=self.base,
             properties=DataDSProperties['MEMBER'].value,
-            type_object='object',
+            type_object='member',
             only_one=False
         )
 
@@ -153,11 +256,16 @@ class DSHook:
                    replace: dict[str, list] = None, clear: list[str] = None, display_name: str = None,
                    description: str = None) -> None:
         """
-        Последовательность исполнений: remove, add, replace, clear
-        :param remove: Удалить одно из значений в атрибуте.
-        :param add: Добавить значение в атрибут.
-        :param replace: Полная замена всех значений.
-        :param clear: Очистка в атрибуте.
+        Функция изменения атрибутов объекта в DS.
+
+        Args:
+            identity: Аргумент принимающий уникальные атрибуты объекта для идентификации (distinguishedName, objectGUID, objectSid или словарь объекта DS (DSDict)).
+            remove: Удалить одно из значений в атрибуте.
+            add: Добавить значение в атрибут.
+            replace: Полная замена всех значений.
+            clear: Очистка в атрибуте.
+            display_name: Заполнение или изменение атрибута "displayName".
+            description: Заполнение или изменение атрибута "description".
         """
 
         special = DSDict({
@@ -166,13 +274,33 @@ class DSHook:
         })
 
         ds_set(connect=self._connect, type_object="object", identity=identity, base=self.base,
-               remove=remove, add=add, replace=replace, clear=clear, special=special)
+               remove=remove, add=add, replace=replace, clear=clear, special=special, _logger=self._logger)
 
     def set_user(self, identity: str | DSDict, remove: dict = None, add: dict[str, list] = None,
                  replace: dict[str, list] = None, clear: list[str] = None, display_name: str = None,
                  description: str = None, sam_account_name: str = None, user_principal_name: str = None,
                  enabled: bool = None, password_never_expires: bool = None, account_not_delegated: bool = None,
                  change_password_at_logon: bool = None, account_expiration_date: bool | datetime = None) -> None:
+        """
+        Функция изменения атрибутов пользователя в DS.
+
+        Args:
+            identity: Аргумент принимающий уникальные атрибуты группы для идентификации  (distinguishedName, objectGUID, objectSid, sAMAccountName или словарь объекта DS (DSDict)).
+            remove: Удалить одно из значений в атрибуте.
+            add: Добавить значение в атрибут.
+            replace: Полная замена всех значений.
+            clear: Очистка в атрибуте.
+            display_name: Заполнение или изменение атрибута "displayName".
+            description: Заполнение или изменение атрибута "description".
+            sam_account_name: Заполнение или изменение атрибута "sAMAccountName".
+            user_principal_name: Заполнение или изменение атрибута "userPrincipalName".
+            enabled: Включение или отключение пользователя.
+            password_never_expires: Включение или отключение бессрочного пароля.
+            account_not_delegated: Включение или отключение запрета на делегирование.
+            change_password_at_logon: Включение или отключение требования сменить пароль при входе.
+            account_expiration_date: Указание или отключение срока действия пользователя.
+        """
+
         if user_principal_name and '@' not in user_principal_name:
             raise RuntimeError("В userprincipalname домен должен быть указан через @")
 
@@ -195,12 +323,27 @@ class DSHook:
                 special['userAccountControl']['AccountNotDelegated'] = account_not_delegated
 
         ds_set(connect=self._connect, type_object="user", identity=identity, base=self.base,
-               remove=remove, add=add, replace=replace, clear=clear, special=special)
+               remove=remove, add=add, replace=replace, clear=clear, special=special, _logger=self._logger)
 
     def set_group(self, identity: str | DSDict, remove: dict = None, add: dict[str, list] = None,
                   replace: dict[str, list] = None, clear: list[str] = None, display_name: str = None,
                   description: str = None, sam_account_name: str = None,
                   group_scope: DS_GROUP_SCOPE = None, group_category: DS_GROUP_CATEGORY = None) -> None:
+        """
+        Функция изменения атрибутов группы в DS.
+
+        Args:
+            identity: Аргумент принимающий уникальные атрибуты группы для идентификации  (distinguishedName, objectGUID, objectSid, sAMAccountName или словарь объекта DS (DSDict)).
+            remove: Удалить одно из значений в атрибуте.
+            add: Добавить значение в атрибут.
+            replace: Полная замена всех значений.
+            clear: Очистка в атрибуте.
+            display_name: Заполнение или изменение атрибута "displayName".
+            description: Заполнение или изменение атрибута "description".
+            sam_account_name: Заполнение или изменение атрибута "sAMAccountName".
+            group_scope: Изменение области работы группы.
+            group_category: Изменение категории группы.
+        """
 
         special = DSDict()
 
@@ -215,47 +358,106 @@ class DSHook:
             if group_category is not None: special['groupType']['GroupCategory'] = group_category
 
         ds_set(connect=self._connect, type_object="group", identity=identity, base=self.base,
-               remove=remove, add=add, replace=replace, clear=clear, special=special)
+               remove=remove, add=add, replace=replace, clear=clear, special=special, _logger=self._logger)
 
     def set_computer(self, identity: str | DSDict, remove: dict = None, add: dict[str, list] = None,
                      replace: dict[str, list] = None, clear: list[str] = None, display_name: str = None,
                      description: str = None) -> None:
+        """
+        Функция изменения атрибутов компьютера в DS.
+
+        Args:
+            identity: Аргумент принимающий уникальные атрибуты компьютера для идентификации (distinguishedName, objectGUID, objectSid, sAMAccountName или словарь объекта DS (DSDict)).
+            remove: Удалить одно из значений в атрибуте.
+            add: Добавить значение в атрибут.
+            replace: Полная замена всех значений.
+            clear: Очистка в атрибуте.
+            display_name: Заполнение или изменение атрибута "displayName".
+            description: Заполнение или изменение атрибута "description".
+        """
+
         special = DSDict({
             'displayName': display_name,
             'description': description,
         })
 
         ds_set(connect=self._connect, type_object="computer", identity=identity, base=self.base,
-               remove=remove, add=add, replace=replace, clear=clear, special=special)
+               remove=remove, add=add, replace=replace, clear=clear, special=special, _logger=self._logger)
 
     def set_contact(self, identity: str | DSDict, remove: dict = None, add: dict[str, list] = None,
                     replace: dict[str, list] = None, clear: list[str] = None, display_name: str = None,
                     description: str = None) -> None:
+        """
+        Функция изменения атрибутов компьютера в DS.
+
+        Args:
+            identity: Аргумент принимающий уникальные атрибуты контакта для идентификации  (distinguishedName, objectGUID, objectSid или словарь объекта DS (DSDict)).
+            remove: Удалить одно из значений в атрибуте.
+            add: Добавить значение в атрибут.
+            replace: Полная замена всех значений.
+            clear: Очистка в атрибуте.
+            display_name: Заполнение или изменение атрибута "displayName".
+            description: Заполнение или изменение атрибута "description".
+        """
+
         special = DSDict({
             'displayName': display_name,
             'description': description,
         })
 
         ds_set(connect=self._connect, type_object="contact", identity=identity, base=self.base,
-               remove=remove, add=add, replace=replace, clear=clear, special=special)
+               remove=remove, add=add, replace=replace, clear=clear, special=special, _logger=self._logger)
 
     def set_account_password(self, identity: str | DSDict, account_password: str) -> None:
+        """
+        Функция изменения пароля пользователя в DS. Принудительно снимает флаг "PASSWD_NOTREQD"
+
+        Args:
+            identity: Аргумент принимающий уникальные атрибуты пользователя для идентификации (distinguishedName, objectGUID, objectSid, sAMAccountName или словарь объекта DS (DSDict)).
+            account_password: Новый пароль.
+        """
+
         ds_set(connect=self._connect, type_object="user", identity=identity, base=self.base,
-               replace={'unicodePwd': [account_password]})
+               replace={'unicodePwd': [account_password]},
+               special=DSDict({'userAccountControl': DSDict({'PasswordNotRequired': False})}), _logger=self._logger)
 
     def set_account_unlock(self, identity: str | DSDict) -> None:
+        """
+        Функция снятия временной блокировки пользователя в DS (distinguishedName, objectGUID, objectSid, sAMAccountName или словарь объекта DS (DSDict)).
+
+        Args:
+            identity: Аргумент принимающий уникальные атрибуты пользователя для идентификации.
+        """
+
         ds_set(connect=self._connect, type_object="user", identity=identity, base=self.base,
-               replace={'lockoutTime': ["0"]})
+               replace={'lockoutTime': ["0"]}, _logger=self._logger)
 
     def add_group_member(self, identity: str | DSDict,
                          members: str | DSDict | list[str] | tuple[str] | list[DSDict]) -> None:
-        ds_set_member(connect=self._connect, identity=identity, base=self.base, members=members, action='add')
+        """
+        Функция добавления объектов в группу.
+
+        Args:
+            identity: Аргумент принимающий уникальные атрибуты пользователя для идентификации (distinguishedName, objectGUID, objectSid, sAMAccountName или словарь объекта DS (DSDict)).
+            members: Аргумент принимающий уникальные атрибуты члена/членов группы (distinguishedName, objectGUID, objectSid, sAMAccountName или словарь объекта DS (DSDict)).
+        """
+        ds_set_member(connect=self._connect, _logger=self._logger,
+                      identity=identity, base=self.base, members=members, action='add')
 
     def remove_group_member(self, identity: str | DSDict,
                             members: str | DSDict | list[str] | tuple[str] | list[DSDict]) -> None:
-        ds_set_member(connect=self._connect, identity=identity, base=self.base, members=members, action='remove')
+        """
+        Функция добавления объектов в группу.
+
+        Args:
+            identity: Аргумент принимающий уникальные атрибуты пользователя для идентификации (distinguishedName, objectGUID, objectSid, sAMAccountName или словарь объекта DS (DSDict)).
+            members: Аргумент принимающий уникальные атрибуты члена/членов группы (distinguishedName, objectGUID, objectSid, sAMAccountName или словарь объекта DS (DSDict)).
+        """
+        ds_set_member(connect=self._connect, _logger=self._logger,
+                      identity=identity, base=self.base, members=members, action='remove')
 
     def move_object(self, identity: str | DSDict, target_path: str) -> None:
+
         result = search_object(
             connect=self._connect,
             ldap_filter=gen_filter_to_id(identity, type_object='object'),
@@ -265,7 +467,7 @@ class DSHook:
             only_one=True,
         )[0]
 
-        print(f"Move object: DN: {result['distinguishedName']}, new path: {target_path}")
+        self._logger.info(f"Move object: DN: {result['distinguishedName']}, new path: {target_path}")
 
         self._connect.rename_s(result['distinguishedName'],
                                ldap.dn.explode_dn(result['distinguishedName'])[0], target_path)
@@ -280,9 +482,9 @@ class DSHook:
             only_one=True,
         )[0]
 
-        print(f"Rename object: DN: {result['distinguishedName']}, new name: {new_name}, "
-              f"old name: {result['name']}, "
-              f"old cn: {result['cn']}")
+        self._logger.info(f"Rename object: DN: {result['distinguishedName']}, new name: {new_name}, "
+                          f"old name: {result['name']}, "
+                          f"old cn: {result['cn']}")
 
         self._connect.rename_s(result['distinguishedName'], f"CN={new_name}")
 
@@ -315,21 +517,23 @@ class DSHook:
         dict_object['sAMAccountName'] = [sam_account_name]
 
         ds_new(connect=self._connect, type_object='user', path=path, name=name, display_name=display_name,
-               extend=dict_object, other_attributes=other_attributes)
+               extend=dict_object, other_attributes=other_attributes, _logger=self._logger)
 
-    def new_group(self, path: str, name: str, sam_account_name: str,  display_name: str = None, group_scope: DS_GROUP_SCOPE = 'Global',                  group_category: DS_GROUP_CATEGORY = 'Security', other_attributes: dict[str, list] = None) -> None:
+    def new_group(self, path: str, name: str, sam_account_name: str, display_name: str = None,
+                  group_scope: DS_GROUP_SCOPE = 'Global', group_category: DS_GROUP_CATEGORY = 'Security',
+                  other_attributes: dict[str, list] = None) -> None:
         dict_object = DSDict()
 
         dict_object['sAMAccountName'] = [sam_account_name]
         dict_object['groupType'] = [str(gen_gt(gt=0, group_scope=group_scope, group_category=group_category))]
 
         ds_new(connect=self._connect, type_object='group', path=path, name=name, display_name=display_name,
-               extend=dict_object, other_attributes=other_attributes)
+               extend=dict_object, other_attributes=other_attributes, _logger=self._logger)
 
     def new_contact(self, path: str, name: str, display_name: str = None,
                     other_attributes: dict[str, list] = None) -> None:
         ds_new(connect=self._connect, type_object='contact', path=path, name=name, display_name=display_name,
-               extend=None, other_attributes=other_attributes)
+               extend=None, other_attributes=other_attributes, _logger=self._logger)
 
     def remove_object(self, identity: str | DSDict, type_object: DS_TYPE_OBJECT = "object") -> None:
         result = search_object(
@@ -341,7 +545,7 @@ class DSHook:
             only_one=True,
         )[0]
 
-        print(f"Remove object: DN: {result['distinguishedName']}")
+        self._logger.info(f"Remove object: DN: {result['distinguishedName']}")
 
         self._connect.delete_s(result['distinguishedName'])
 

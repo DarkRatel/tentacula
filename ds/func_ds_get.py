@@ -97,8 +97,8 @@ def object_processing(connect, data, properties, properties_shadow):
     return result
 
 
-def search_object(connect, ldap_filter, search_base, properties, type_object, search_scope: DS_TYPE_SCOPE = "subtree",
-                  only_one: bool = False):
+def search_object(connect, _logger, ldap_filter, search_base, properties, type_object,
+                  search_scope: DS_TYPE_SCOPE = "subtree", only_one: bool = False):
     ldap_filter = DataDSLDAP[type_object.upper()].unit(ldap_filter)
 
     if only_one and '*' in ldap_filter:
@@ -136,8 +136,8 @@ def search_object(connect, ldap_filter, search_base, properties, type_object, se
     else:
         raise RuntimeError(f"Неизвестный тип области поиска: {search_scope}")
 
-    print(f"Get {type_object}: search_base: {search_base}, search_scope: {search_scope}, "
-          f"ldap_filter: {ldap_filter}, properties: {properties}")
+    _logger.info(f"Get {type_object}: search_base: {search_base}, search_scope: {search_scope}, "
+                 f"ldap_filter: {ldap_filter}, properties: {properties}")
 
     req_ctrl = SimplePagedResultsControl(criticality=False, size=1499, cookie='')
 
@@ -217,7 +217,7 @@ def gen_filter_to_id(identity: str | DSDict, type_object: DS_TYPE_OBJECT = "obje
     else:
         raise RuntimeError("В объекте нет подходящих атрибутов")
 
-    return DataDSLDAP[type_object.upper()].unit(search_line)
+    return search_line
 
 
 def c_sid_byte_to_string(data: bytes):

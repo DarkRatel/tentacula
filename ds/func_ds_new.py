@@ -9,7 +9,7 @@ from .ds_function import search_root_dse
 from .convertors_value import UAC_FLAGS, convert_object_class
 
 
-def ds_new(connect, type_object: DS_TYPE_OBJECT, path: str, name: str, display_name: str = None,
+def ds_new(connect, _logger, type_object: DS_TYPE_OBJECT, path: str, name: str, display_name: str = None,
            extend: dict[str, list] = None, other_attributes: dict[str, list] = None) -> None:
     dn = f"CN={ldap.dn.escape_dn_chars(name)},{path}"
 
@@ -30,7 +30,7 @@ def ds_new(connect, type_object: DS_TYPE_OBJECT, path: str, name: str, display_n
                 raise RuntimeError(f"Атрибут {key} уже был определён. Удалите его из other_attributes")
         dict_object.update(**other_attributes)
 
-    print(f"New {type_object}: DN: {dn}, value: {dict_object}")
+    _logger.info(f"New {type_object}: DN: {dn}, value: {dict_object}")
 
     for key, values in dict_object.items():
         if key.lower() == 'unicodePwd'.lower():
