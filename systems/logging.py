@@ -1,6 +1,6 @@
 import logging
 
-# === 1. Глобальный логгер для всей системы ===
+# Глобальный логгер для всей системы
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
