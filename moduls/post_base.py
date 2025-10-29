@@ -15,13 +15,6 @@ from systems.logging import logger
 from systems.config import AppConfig
 
 
-def json_serial(obj):
-    """JSON serializer for objects not serializable by default json code"""
-    if isinstance(obj, datetime):
-        return obj.isoformat()
-    raise TypeError(f"Object of type {obj.__class__.__name__} is not JSON serializable")
-
-
 def create_post(path_name: str, base_model: BaseModel,
                 func: Callable[..., Union[int, str, float, list, tuple, dict, bool, None]], router: APIRouter):
     """Функция генерации присосок"""
@@ -60,11 +53,12 @@ def create_post(path_name: str, base_model: BaseModel,
                 if any([subject, serial]):
                     logger.info(f"Client cert Subject: {subject}, Client cert Serial: {serial}")
 
+                input_dada = data.model_dump()
+
                 logger.info("=====Input data=====")
-                [logger.info({r: v}) for r, v in data.model_dump().items()]
+                logger.info(input_dada)
                 logger.info("======Function======")
-                result = func(**data.model_dump())
-                result = json.dumps(result, default=json_serial)
+                result = func(**input_dada)
                 logger.info("====================")
 
                 logger.info(f"DONE")
@@ -95,7 +89,7 @@ def create_post(path_name: str, base_model: BaseModel,
                         file.write(f"{item}\n")
 
             return JSONResponse(
-                ResponseFrom(username=str(user), successfully=successfully, answer=result).model_dump(),
+                ResponseFrom(username=str(user), successfully=successfully, answer=result).model_dump(mode="json"),
                 status_code=status.HTTP_200_OK
             )
 
