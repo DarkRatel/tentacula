@@ -1,5 +1,5 @@
 {
-  "REGION": {
+  "EXAMPLE": {
     "address": "https://nginx_2:5002/sucker/first",
     "SSL_CERTFILE": "/app/tentacula/certs/server.crt",
     "SSL_KEYFILE": "/app/tentacula/certs/server.key",
