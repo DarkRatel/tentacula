@@ -8,4 +8,4 @@ conda activate tentacula
 pip install -r app/requirements.txt
 
 # Упаковка окружения
-conda-pack -n tentacula -o tentacula.tar.gz
+conda-pack -n tentacula -o tentacula.tar.gz --compress-level 9

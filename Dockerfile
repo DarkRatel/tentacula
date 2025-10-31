@@ -14,28 +14,27 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app/tentacula
 
-# ---------- Копируем окружение и приложение ----------
-COPY tentacula.tar.gz .
+# ---------- Копирование окружения и приложения ----------
+COPY tentacula.tar.gz /app/tentacula/tentacula.tar.gz
 COPY ./app /app/tentacula/app
 COPY config.cfg /app/tentacula/config.cfg
+COPY composition_alias.json /app/tentacula/composition_alias.json
 COPY certs /app/tentacula/certs
 COPY schedulers /app/tentacula/schedulers
 COPY suckers /app/tentacula/suckers
 
-COPY composition_alias.json /app/tentacula/composition_alias.json
-
 # ---------- Распаковка окружения ----------
-RUN mkdir /opt/conda_env && \
-    tar -xzf tentacula.tar.gz -C /opt/conda_env && \
+RUN mkdir /app/tentacula/conda_env && \
+    tar -xzf tentacula.tar.gz -C /app/tentacula/conda_env && \
     rm tentacula.tar.gz
 
 # ---------- Настройка переменных окружения ----------
-ENV PATH="/opt/conda_env/bin:$PATH"
+ENV PATH="/app/tentacula/conda_env/bin:$PATH"
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# ---------- Открываем порт ----------
+# ---------- Открытие порта ----------
 EXPOSE 8000
 
-# ---------- При запуске контейнера выполняем conda-unpack и стартуем сервер ----------
-CMD ["/bin/bash", "-c", "/opt/conda_env/bin/conda-unpack && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+# ---------- Запуск контейнера Conda и старт сервера ----------
+CMD ["/bin/bash", "-c", "/app/tentacula/conda_env/bin/conda-unpack && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
