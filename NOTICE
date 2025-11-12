@@ -1,0 +1,47 @@
+This software includes third-party components licensed under open-source licenses.
+Below is a list of dependencies and their respective licenses.
+
+──────────────────────────────────────────────
+MIT License:
+──────────────────────────────────────────────
+- uvicorn (https://github.com/encode/uvicorn)
+- httptools (https://github.com/MagicStack/httptools)
+- fastapi (https://github.com/tiangolo/fastapi)
+- apscheduler (https://github.com/agronholm/apscheduler)
+- SQLAlchemy (https://github.com/sqlalchemy/sqlalchemy)
+- python-ldap (https://github.com/python-ldap/python-ldap)
+- pydantic (https://github.com/pydantic/pydantic)
+
+──────────────────────────────────────────────
+BSD 3-Clause License:
+──────────────────────────────────────────────
+- starlette (https://github.com/encode/starlette)
+- python-dotenv (https://github.com/theskumar/python-dotenv)
+- httpx (https://github.com/encode/httpx)
+- pip-system-certs (https://github.com/cedadev/pip-system-certs)
+- jinja2 (https://github.com/pallets/jinja)
+- conda-pack (https://github.com/conda/conda-pack)
+
+──────────────────────────────────────────────
+Apache License 2.0:
+──────────────────────────────────────────────
+- asyncpg (https://github.com/MagicStack/asyncpg)
+- bcrypt (https://github.com/pyca/bcrypt)
+
+──────────────────────────────────────────────
+GNU Lesser General Public License (LGPL), with exceptions:
+──────────────────────────────────────────────
+- psycopg2-binary (https://github.com/psycopg/psycopg2)
+  Licensed under the GNU Lesser General Public License (LGPL)
+  with additional permission allowing use in closed-source applications
+  when dynamically linked.
+
+──────────────────────────────────────────────
+NOTICE:
+──────────────────────────────────────────────
+Each third-party component is licensed to you under its respective open-source license.
+Copies of these licenses can be found in the source distributions of the corresponding
+projects or at their official repositories (see links above).
+
+This project does not claim ownership of any third-party code.
+All trademarks and copyrights belong to their respective owners.
