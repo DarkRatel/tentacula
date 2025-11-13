@@ -1,75 +1,49 @@
 import os
-import importlib
 
-import uvicorn
-from fastapi import FastAPI
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from fastapi import FastAPI, Request
 from contextlib import asynccontextmanager
+from jinja2 import Template
 
-from app.config import AppConfig
-from app.sites.suckers import router_sucker
-from app.sites.composition import router_composition
-from app.systems.logging import logger
-from app.systems.database import engine, Base
-
-if AppConfig.SCHEDULERS_ENABLED:
-    scheduler = AsyncIOScheduler()
-
-    # Импорт всех дополнительных путей связанных с присосками
-    for filename in os.listdir(AppConfig.SCHEDULERS_FOLDER):
-        if filename.endswith(".py") and filename != "__init__.py":
-            importlib.import_module(f"{AppConfig.SCHEDULERS_FOLDER}.{filename[:-3]}")
+from app.systems.config import AppConfig
+from app.systems.logging import logger, s_id_ctx_var
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # NGINX_DEFAULT = "/nginx/default.conf"
-    # NGINX_J2_HTTP = "/nginx/default.conf.http.j2"
-    # NGINX_J2_HTTPS = "/nginx/default.conf.https.j2"
-    #
-    # from jinja2 import Template
-    # from pathlib import Path
-    # import socket
+    logger.info(f"COMPOSITION_ENABLED: {AppConfig.COMPOSITION_ENABLED}")
+    logger.info(f"    SUCKERS_ENABLED: {AppConfig.SUCKERS_ENABLED}")
+    logger.info(f"         SUCKERS_DS: {AppConfig.SUCKERS_DS}")
+    logger.info(f" SCHEDULERS_ENABLED: {AppConfig.SCHEDULERS_ENABLED}")
+    logger.info(f"      SCHEDULERS_DS: {AppConfig.SCHEDULERS_DS}")
 
-    # logger.info(f"Generate NGINX Config...")
-    #
-    # template_file =  NGINX_J2_HTTPS if AppConfig.USE_SSL else NGINX_J2_HTTP
-    #
-    # with open(template_file) as f:
-    #     template = Template(f.read())
-    #
-    # conf = Template(template).render(
-    #     uvicorn_host_name=socket.gethostname(),
-    #     uvicorn_port=AppConfig.PORT
-    # )
-    #
-    # with open(NGINX_DEFAULT, "w") as f:
-    #     f.write(conf)
-    #
-    # logger.info(f"...Done")
+    if AppConfig.NGINX_FILE:
+        logger.info(f"Generate NGINX Conf: {AppConfig.NGINX_FILE}")
 
-    logger.info(f"SUCKERS_ENABLED: {AppConfig.SUCKERS_ENABLED}")
-    logger.info(f"SCHEDULERS_ENABLED: {AppConfig.SCHEDULERS_ENABLED}")
+        with open(f"{os.getcwd()}/app/nginx/nginx.conf.j2", "r") as f:
+            template = Template(f.read()).render(
+                folder_logs=AppConfig.NGINX_FOLDER_LOGS,
+                port=AppConfig.PORT,
+                ssl_certfile=AppConfig.SSL_CERTFILE,
+                ssl_keyfile=AppConfig.SSL_KEYFILE,
+                ssl_ca_certs=AppConfig.SSL_CA_CERTS,
+            )
 
-    if AppConfig.SCHEDULERS_ENABLED:
-        logger.info("Run scheduler...")
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
+        with open(AppConfig.NGINX_FILE, "w") as f:
+            f.write(template)
 
-        scheduler.start()
-        yield  # Запуск самого FastAPI
-        logger.info("...stop scheduler")
-        scheduler.shutdown()
+        logger.info(f"Generate Done")
     else:
-        yield  # Запуск самого FastAPI
+        logger.info(f"Skip Generate NGINX Conf")
+
+    yield
 
 
-app = FastAPI()
+app = FastAPI(lifespan=lifespan)
 
-app.include_router(router_sucker)
-app.include_router(router_composition)
-importlib.import_module("app.sites.root")
 
-@app.get("/check")
-def index():
-    return {"message": "Uvicorn is working!"}
+@app.middleware("http")
+async def system_middleware(request: Request, call_next):
+    # Сохранение уникального кода сессии в контекст, для добавления в логи
+    s_id_ctx_var.set(request.headers["x-request-id"])
+    response = await call_next(request)
+    return response
