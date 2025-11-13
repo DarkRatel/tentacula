@@ -1,7 +1,5 @@
 # Tentacula
 
-[![License](https://img.shields.io/:license-Apache%202-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0.txt)
-
 Приложение Tentacula работает как терминирующий компонент. Когда клиенту нужно обратиться к удалённой системе, доступ к
 которой напрямую невозможен или не рекомендуется, на разрыв между клиентом и сервером устанавливается Tentacula. По
 HTTP-протоколу клиент передаёт данные необходимые для запроса (данные авторизации и атрибуты запроса), на заранее
@@ -81,8 +79,8 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ```
 
-Строка запуска приложения как ASGI web-сервера:
-`/bin/bash -c /app/tentacula/conda_env/bin/conda-unpack && uvicorn app.main:app --host 0.0.0.0 --port 8000`
+Строка запуска приложения как ASGI web-сервера (запускается из области приложения `/app/tentacula`):
+`/app/tentacula/conda_env/bin/conda-unpack && uvicorn app.main:app --host 0.0.0.0 --port 8000`
 
 ## Настройка среды
 
@@ -93,3 +91,8 @@ ENV PYTHONUNBUFFERED=1
 2. Конфигурационный файл `config.cfg`.
 
 Переменные окружения генерируются по формуле: `TENTACULA__<РАЗДЕЛ>__<ПЕРЕМЕННАЯ>`
+
+Следующие атрибуты, принимают путь файлу, в котором будет описано значение:
+
+- app -> DB_ASYNC_URL
+- app -> DB_SECRET_KEY
