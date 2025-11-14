@@ -12,6 +12,7 @@ from app.main import app
 
 @app.get("/", response_class=Response)
 async def sucker_root_get(user: User = Depends(current_user)) -> JSONResponse:
+    """Корневой сайт приложения, возвращающий все опубликованные инстансы"""
     routes_info = []
     for route in app.routes:
         if isinstance(route, APIRoute):

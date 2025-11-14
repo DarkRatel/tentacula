@@ -1,4 +1,5 @@
 import os
+import importlib
 
 from fastapi import FastAPI, Request
 from contextlib import asynccontextmanager
@@ -47,3 +48,7 @@ async def system_middleware(request: Request, call_next):
     s_id_ctx_var.set(request.headers["x-request-id"])
     response = await call_next(request)
     return response
+
+
+# Импорт первой страницы приложения
+importlib.import_module("app.sites.root")
