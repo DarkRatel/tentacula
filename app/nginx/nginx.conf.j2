@@ -20,11 +20,11 @@ http {
     access_log {{ folder_logs }}/nginx_access.log tentacula;
     error_log  {{ folder_logs }}/nginx_error.log;
 
-    sendfile        on;
-    keepalive_timeout  65;
+    sendfile          on;
+    keepalive_timeout 65;
 
     server {
-        listen {{ port }} ssl;
+        listen      {{ port }} ssl;
         server_name _;
 
         # Cертификат сервера
@@ -32,17 +32,18 @@ http {
         ssl_certificate_key {{ ssl_keyfile }};
 
         # Включение TLS
-        ssl_protocols       TLSv1.2 TLSv1.3;
-        ssl_ciphers         HIGH:!aNULL:!MD5;
+        ssl_protocols TLSv1.2 TLSv1.3;
+        ssl_ciphers   HIGH:!aNULL:!MD5;
 
         # Включение проверки клиентского сертификата
         ssl_client_certificate {{ ssl_ca_certs }};
-        ssl_verify_client on;
+        ssl_verify_client      on;
 
-        # Проксируем все запросы на uvicorn
+        # Прокисрование всех запросов на uvicorn
         location / {
-            proxy_pass         http://127.0.0.1:8000/;
-            proxy_set_header   Host $host;
+            proxy_pass http://127.0.0.1:8000/;
+
+            proxy_set_header Host              $host;
             proxy_set_header X-Forwarded-Proto $scheme;
             proxy_set_header X-Server-IP       $server_addr;
             proxy_set_header X-Request-ID      $request_id;
