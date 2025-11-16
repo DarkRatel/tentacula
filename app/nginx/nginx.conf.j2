@@ -8,6 +8,7 @@ events {
 }
 
 http {
+    # Формат обычных логов
     log_format tentacula '[$time_iso8601] [$request_id] "$remote_addr" '
                          '"$request" "$status" "$body_bytes_sent" '
                          '"$http_referer" "$http_user_agent" '
@@ -18,7 +19,7 @@ http {
 
     # Логи HTTP-запросов
     access_log {{ folder_logs }}/nginx_access.log tentacula;
-    error_log  {{ folder_logs }}/nginx_error.log;
+    error_log  {{ folder_logs }}/nginx_error.log info;
 
     sendfile          on;
     keepalive_timeout 65;
@@ -43,13 +44,13 @@ http {
         location / {
             proxy_pass http://127.0.0.1:8000/;
 
-            proxy_set_header Host              $host;
-            proxy_set_header X-Forwarded-Proto $scheme;
-            proxy_set_header X-Server-IP       $server_addr;
-            proxy_set_header X-Request-ID      $request_id;
-            proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-            proxy_set_header X-Client-Subject  $ssl_client_s_dn;
-            proxy_set_header X-Client-Serial   $ssl_client_serial;
+            proxy_set_header X-Forwarded-Proto $scheme;                    # Протокол подключения
+            proxy_set_header Host              $host;                      # Имя хоста (сервера)
+            proxy_set_header X-Server-IP       $server_addr;               # IP-адрес хоста (сервера)
+            proxy_set_header X-Request-ID      $request_id;                # Уникальный код сессии
+            proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for; # IP-адреса клиента
+            proxy_set_header X-Client-Subject  $ssl_client_s_dn;           # После subjec (DN) сертификата пользователя
+            proxy_set_header X-Client-Serial   $ssl_client_serial;         # Уникальный код сертификата клиента
         }
     }
 }
