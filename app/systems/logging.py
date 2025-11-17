@@ -1,4 +1,8 @@
+import json
+import re
+import copy
 import logging
+import traceback
 from datetime import datetime, timezone
 
 import contextvars
@@ -6,6 +10,19 @@ from logging.handlers import RotatingFileHandler
 import sys
 
 from app.systems.config import AppConfig
+
+# Преобразование списка ключей маскирования, в регулярное выражение
+MASK_COMPILE = re.compile('|'.join(AppConfig.LOGS_MASK_KEYS), flags=re.IGNORECASE)
+
+
+def mask_dict(data):
+    """Функция маскирования значений, если выводится словарь и ключ содержит одно из ключевых значений"""
+    if isinstance(data, dict):
+        return {k: ("***" if MASK_COMPILE.match(k) else mask_dict(v)) for k, v in data.items()}
+    elif isinstance(data, (list, tuple)):
+        return type(data)(mask_dict(v) for v in data)
+    return data
+
 
 # Контекстная переменная для текущего кода сессии.
 # Используется в middleware, для получения из контекста ID-сессии
@@ -16,16 +33,34 @@ class SafeFormatter(logging.Formatter):
     def format(self, record):
         # Если кода сессии нет, применяется значение по умолчанию
         record.s_id = s_id_ctx_var.get("-")
+
+        # Блок маскирования значений в логах
+        if record.args:
+            safe_args = mask_dict(copy.deepcopy(record.args))
+            record.args = safe_args
+        else:
+            msg = record.getMessage()
+            try:
+                msg = json.loads(msg)
+                msg = mask_dict(msg)
+            except Exception:
+                try:
+                    msg = mask_dict(eval(msg))
+                except Exception:
+                    pass
+            record.msg = msg
+
         return super().format(record)
 
     def formatTime(self, record, datefmt=None):
         dt = datetime.fromtimestamp(record.created, tz=timezone.utc)
         return dt.isoformat(timespec="milliseconds")
 
+
 LOG_FORMAT = "[%(asctime)s] [%(s_id)s|%(levelname)s|%(name)s] %(message)s"
 
 file_handler = RotatingFileHandler(
-    f'{AppConfig.FOLDER_LOGS}/api.log',
+    f'{AppConfig.LOGS_FOLDER}/api.log',
     maxBytes=10 * 1024 * 1024,
     backupCount=5,
     encoding="utf-8"
