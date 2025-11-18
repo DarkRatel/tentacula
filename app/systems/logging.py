@@ -2,7 +2,6 @@ import json
 import re
 import copy
 import logging
-import traceback
 from datetime import datetime, timezone
 
 import contextvars
