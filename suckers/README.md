@@ -46,6 +46,17 @@ def addition(terms_1: int, terms_2: int):
 create_post(endpoint="addition", base_model=SpecData, func=addition, router=router_sucker)
 ```
 
+## Логирование
+
+Для корректного логирования используется встроенный класс `from app.systems.logging import logger`.
+Он сохраняет логи в локальную папку и маскирует чувствительную информацию,
+ключ попадает под значения из `LOGS_MASK_KEYS`.
+Рекомендуемое объявление логов, для корректной работы маскирования:
+
+1. Использовать спецификатор формата: `logger.info('Return: %s', return_dict)`;
+2. Передавать словарь напрямую: `logger.info(return_dict)`;
+3. Передавать словарь в формате JSON: `logger.info(json.dumps(r))`.
+
 ## Общая информация
 
 - Ответ от эндпоинта в формате JSON, со следующими базовыми значениями:
