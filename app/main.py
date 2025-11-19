@@ -6,7 +6,10 @@ from contextlib import asynccontextmanager
 from jinja2 import Template
 
 from app.systems.config import AppConfig
-from app.systems.logging import logger, s_id_ctx_var
+from app.systems.logging import logger, s_id_ctx_var, setup_logging
+
+# Настройка root'ового logging, для перехвата всех данных выводимых в логгер
+setup_logging()
 
 
 @asynccontextmanager

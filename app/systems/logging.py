@@ -80,3 +80,15 @@ for name in ["uvicorn", "uvicorn.error", "uvicorn.access", "fastapi"]:
     logger.handlers = [file_handler, console_handler]
     logger.propagate = False
     logger.setLevel(logging.INFO)
+
+
+def setup_logging():
+    class GlobalLogger(logging.Logger):
+        def __init__(self, name):
+            super().__init__(name)
+
+            self.handlers = [file_handler, console_handler]
+            self.propagate = False
+            self.setLevel(logging.INFO)
+
+    logging.setLoggerClass(GlobalLogger)
