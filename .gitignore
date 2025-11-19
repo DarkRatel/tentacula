@@ -4,5 +4,6 @@
 /certs/
 /tentacula/
 /nginx/
+tentacula_env.tar.gz
 Dockerfile
 supervisord.conf
