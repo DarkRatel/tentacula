@@ -11,13 +11,13 @@ import sys
 from app.systems.config import AppConfig
 
 # Преобразование списка ключей маскирования, в регулярное выражение
-MASK_COMPILE = re.compile('|'.join(AppConfig.LOGS_MASK_KEYS), flags=re.IGNORECASE)
+MASK_COMPILE = re.compile(f"{'|'.join([f'^{i}$' for i in AppConfig.LOGS_MASK_KEYS])}", flags=re.IGNORECASE)
 
 
 def mask_dict(data):
     """Функция маскирования значений, если выводится словарь и ключ содержит одно из ключевых значений"""
     if isinstance(data, dict):
-        return {k: ("***" if MASK_COMPILE.match(k) else mask_dict(v)) for k, v in data.items()}
+        return {k: ("***" if MASK_COMPILE.search(k) else mask_dict(v)) for k, v in data.items()}
     elif isinstance(data, (list, tuple)):
         return type(data)(mask_dict(v) for v in data)
     return data
