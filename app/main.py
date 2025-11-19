@@ -61,3 +61,16 @@ if AppConfig.SUCKERS_ENABLED:
     from app.sites.suckers import router_sucker
 
     app.include_router(router_sucker)
+
+# Импорт щупалец связанных с DS, если включено
+if AppConfig.SUCKERS_DS:
+    from app.sites.ds import router_ds
+
+    for i in ["add_group_member", "get_computer", "get_contact", "get_group", "get_group_member", "get_object",
+              "get_user", "move_object", "new_contact", "new_group", "new_user", "remove_computer", "remove_contact",
+              "remove_group", "remove_group_member", "remove_object", "remove_user", "rename_object",
+              "set_account_password", "set_account_unlock", "set_computer", "set_contact", "set_group", "set_object",
+              "set_user"]:
+        importlib.import_module(f"app.sites.ds.{i}")
+
+    app.include_router(router_ds)

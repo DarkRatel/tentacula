@@ -2,31 +2,22 @@ from typing import Type
 
 from pydantic import BaseModel
 
-from moduls.post_base import create_post
-from sites.suckers import router_sucker
-from ds.ds_dict import DSDict
-from ds.ds_hook import DSHook, DS_TYPE_OBJECT, DS_TYPE_SCOPE
+from app.moduls.post_base import create_post
+from . import router_ds
+from app.ds import DSDict, DSHook
 
 
 class SpecData(BaseModel):
     login: str
     password: str
     host: str
-    port: int = 636
     base: str = None
 
     identity: str | Type[DSDict]
 
 
-def get_group_member(login: str, password: str, host: str, identity: str | DSDict,
-                     port: int = 636, base: str = None):
-    with DSHook(
-            login=login,
-            password=password,
-            host=host,
-            port=port,
-            base=base,
-    ) as ds:
+def get_group_member(login: str, password: str, host: str, identity: str | DSDict, base: str = None):
+    with DSHook(login=login, password=password, host=host, port=636, base=base) as ds:
         result = ds.get_group_member(
             identity=identity
         )
@@ -34,4 +25,4 @@ def get_group_member(login: str, password: str, host: str, identity: str | DSDic
     return result
 
 
-create_post("get_group_member", SpecData, get_group_member, router_sucker)
+create_post("get_group_member", SpecData, get_group_member, router_ds)
