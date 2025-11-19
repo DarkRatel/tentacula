@@ -59,14 +59,6 @@ class DSHook:
 
         self._logger.setLevel(log_level)  # Указание уровня логирования
 
-        # Добавляется хендлер только если его нет
-        if not self._logger.handlers:
-            handler = logging.StreamHandler()
-            formatter = logging.Formatter("[%(asctime)s] [%(levelname)s|%(name)s] %(message)s")
-            handler.setFormatter(formatter)
-            self._logger.addHandler(handler)
-            self._logger.propagate = False
-
         self._logger.debug(f"Создание экземпляра логгера {self.__class__.__name__}")
 
     def __enter__(self):
