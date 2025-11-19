@@ -28,6 +28,8 @@ def create_post(endpoint: str, base_model: Type[BaseModel],
     else:
         name_func = endpoint
 
+    endpoint = '/' if endpoint == '/' else f"/{endpoint}"
+
     route_name = router.prefix.replace('/', '')
 
     def create_handler():
