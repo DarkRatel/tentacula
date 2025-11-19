@@ -9,10 +9,8 @@ events {
 
 http {
     # Формат обычных логов
-    log_format tentacula '[$time_iso8601] [$request_id] "$remote_addr" '
-                         '"$request" "$status" "$body_bytes_sent" '
-                         '"$http_referer" "$http_user_agent" '
-                         '"$ssl_client_serial" "$ssl_client_s_dn"';
+    log_format tentacula '[$time_iso8601] [$request_id] "$remote_addr" "$request" "$status" "$body_bytes_sent" '
+                         '"$http_referer" "$http_user_agent" "$ssl_client_serial" "$ssl_client_s_dn"';
 
     include       /etc/nginx/mime.types;
     default_type  application/octet-stream;
@@ -49,7 +47,7 @@ http {
             proxy_set_header X-Server-IP       $server_addr;               # IP-адрес хоста (сервера)
             proxy_set_header X-Request-ID      $request_id;                # Уникальный код сессии
             proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for; # IP-адреса клиента
-            proxy_set_header X-Client-Subject  $ssl_client_s_dn;           # После subjec (DN) сертификата пользователя
+            proxy_set_header X-Client-Subject  $ssl_client_s_dn;           # После subject (DN) сертификата пользователя
             proxy_set_header X-Client-Serial   $ssl_client_serial;         # Уникальный код сертификата клиента
         }
     }
