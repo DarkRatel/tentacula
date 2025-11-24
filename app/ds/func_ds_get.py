@@ -240,10 +240,8 @@ def c_datetime_unicode_to_python(data: bytes):
 
 
 def c_datetime_win_to_python(data: bytes):
-    if data in [b'9223372036850000000', b'9223372036854775807']:
+    if data in [b'9223372036850000000', b'9223372036854775807', b'0']:
         return int(data.decode("utf-8"))
-    elif data == b'0':
-        return 0
 
     return (datetime(1601, 1, 1, tzinfo=datetime.now().astimezone().tzinfo) +
             timedelta(seconds=int(data) / 10_000_000))
