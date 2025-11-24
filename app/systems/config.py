@@ -118,6 +118,7 @@ class _AppConfig:
         self.SUCKERS_ENABLED = _read_bool(config=_config, chapter='app', name='SUCKERS_ENABLED', default=False)
         if self.SUCKERS_ENABLED:
             self.SUCKERS_FOLDER = _read_any(config=_config, chapter='app', name='SUCKERS_FOLDER').rstrip("/")
+            os.makedirs(self.SUCKERS_FOLDER, exist_ok=True)
 
         self.SUCKERS_DS = _read_bool(config=_config, chapter='app', name='SUCKERS_DS', default=False)
 
@@ -125,6 +126,7 @@ class _AppConfig:
         self.SCHEDULERS_ENABLED = _read_bool(config=_config, chapter='app', name='SCHEDULERS_ENABLED', default=False)
         if self.SCHEDULERS_ENABLED:
             self.SCHEDULERS_FOLDER = _read_any(config=_config, chapter='app', name='SCHEDULERS_FOLDER').rstrip("/")
+            os.makedirs(self.SCHEDULERS_FOLDER, exist_ok=True)
 
         self.SCHEDULERS_DS = _read_bool(config=_config, chapter='app', name='SCHEDULERS_DS', default=False)
 
@@ -137,6 +139,8 @@ class _AppConfig:
 
         # Параметры логирования приложения
         self.LOGS_FOLDER = _read_any(config=_config, chapter='app', name='LOGS_FOLDER', default='password').rstrip("/")
+        os.makedirs(self.LOGS_FOLDER, exist_ok=True)
+
         self.LOGS_MASK_KEYS = _read_any(config=_config, chapter='app', name='LOGS_MASK_KEYS')
         if self.LOGS_MASK_KEYS:
             self.LOGS_MASK_KEYS = self.LOGS_MASK_KEYS.split(',')
@@ -146,6 +150,8 @@ class _AppConfig:
         self.NGINX_FILE = _read_any(config=_config, chapter='web', name='NGINX_FILE', default=False)
         if self.NGINX_FILE:
             self.NGINX_FOLDER_LOGS = _read_any(config=_config, chapter='web', name='NGINX_FOLDER_LOGS').rstrip("/")
+            os.makedirs(self.NGINX_FOLDER_LOGS, exist_ok=True)
+
             self.PORT = _read_any(config=_config, chapter='web', name='PORT', type_=int)
             self.SSL_CERTFILE = _read_any(config=_config, chapter='web', name='SSL_CERTFILE')
             self.SSL_KEYFILE = _read_any(config=_config, chapter='web', name='SSL_KEYFILE')
