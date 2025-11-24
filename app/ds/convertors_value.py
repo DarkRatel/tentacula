@@ -109,4 +109,4 @@ def convert_object_class(name: str = None, flags: list = None) -> str | list:
             return list_types[name.lower()]
         raise RuntimeError("Неизвестный тип объекта. Невозможно подобрать список ключей")
     else:
-        raise RuntimeError("Переданы недопустимы данные")
+        raise RuntimeError(f"Переданы недопустимы данные. flags: {flags}, name: {name}")
