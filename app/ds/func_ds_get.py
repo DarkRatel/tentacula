@@ -13,83 +13,81 @@ from .attributes_type import ATTR_TYPES
 from .convertors_value import convert_grouptype, convert_object_class, UAC_FLAGS
 from .ds_function import search_attribute_range
 
+ATTR_SPECIAL = DSDict({
+    "objectGUID": lambda v: [str(uuid.UUID(bytes_le=i)) for i in v],
+    "objectClass": lambda v: convert_object_class(flags=[i.decode("utf-8") for i in v]),
+})
+
 TYPE_HANDLERS = {
-    # Distinguished Name (DN, ссылка на другой объект AD).
-    "2.5.5.1": lambda v: v.decode("utf-8"),
-    # OID String (строка с OID, например schemaIDGUID).
-    "2.5.5.2": lambda v: v.decode("utf-8"),
-    # Case-Insensitive String (обычный текст, не чувствительный к регистру).
-    "2.5.5.4": lambda v: v,
-    # Case-Sensitive String (текст, где регистр важен).
-    "2.5.5.5": lambda v: v.decode("utf-8"),
-    # Object Identifier (OID) (внутренний идентификатор схемы).
-    "2.5.5.6": lambda v: int(v),
-    # Numeric String (строка, содержащая только цифры).
-    "2.5.5.7": lambda v: v,
-    # Boolean
-    "2.5.5.8": lambda v: c_bool_string_to_bool(v),
-    # Printable String (строка, ограниченный набор символов ASCII).
-    "2.5.5.9": lambda v: int(v.decode("utf-8")),
-    # Integer (32-битное число).
-    "2.5.5.10": lambda v: str(uuid.UUID(bytes_le=v)),
-    # Generalized Time (дата/время в формате LDAP, напр. 20240916132547.0Z).
-    "2.5.5.11": lambda v: c_datetime_unicode_to_python(v),
-    # DN with String (Distinguished Name + строка, например member).
-    "2.5.5.12": lambda v: v.decode("utf-8"),
-    # Presentation Address (старый тип для X.500, редко используется).
-    "2.5.5.13": lambda v: v,
-    # DN with Binary (DN + бинарные данные, например memberOfBL).
-    "2.5.5.14": lambda v: v,
-    # Unicode String (основной текстовый тип в AD).
-    "2.5.5.15": lambda v: v,
-    # LargeInteger (целое 64-битное, часто хранится как high/low — например pwdLastSet, lastLogonTimestamp).
-    "2.5.5.16": lambda v: c_datetime_win_to_python(v),
-    # SID (Security Identifier).
-    "2.5.5.17": lambda v: c_sid_byte_to_string(v),
-    # Если неизвестный атрибут
-    "unknown": lambda v: v,
+    # Строка Distinguished ж\Name
+    "2.5.5.1": lambda v: [i.decode("utf-8") for i in v],
+    # Строка без учета регистра символов (CaseIgnore)
+    "2.5.5.4": lambda v: [i.decode("utf-8") for i in v],
+    # Булев
+    "2.5.5.8": lambda v: [c_bool_string_to_bool(i.decode("utf-8")) for i in v],
+    # Целое число
+    "2.5.5.9": lambda v: [int(i) for i in v],
+    # Время в формате UTC (напр. 20240916132547.0Z).
+    "2.5.5.11": lambda v: [c_datetime_unicode_to_python(i) for i in v],
+    # Юникод (Строка "Пропустить регистр")
+    "2.5.5.12": lambda v: [i.decode("utf-8") for i in v],
+    # Большое целое число (IADsLargeInteger) (целое 64-битное, например pwdLastSet, lastLogonTimestamp).
+    "2.5.5.16": lambda v: [c_datetime_win_to_python(i) for i in v],
+    # Идентификатор безопасности (Октетная строка)
+    "2.5.5.17": lambda v: [c_sid_byte_to_string(i) for i in v]
 }
 
-ATTR_EXTEND = DSDict({
-    "objectClass": [
-        ('objectClass', lambda v: convert_object_class(flags=v))
-    ],
-    "userAccountControl": [
-        ('Enabled', lambda v: False if UAC_FLAGS["ACCOUNTDISABLE"] & v else True),
-        ('PasswordNeverExpires', lambda v: True if UAC_FLAGS["DONT_EXPIRE_PASSWORD"] & v else False),
-        ('AccountNotDelegated', lambda v: True if UAC_FLAGS["NOT_DELEGATED"] & v else False),
-        ('PasswordNotRequired', lambda v: True if UAC_FLAGS["PASSWD_NOTREQD"] & v else False),
-    ],
-    "groupType": [
-        ('GroupScope', lambda v: return_groupscope(convert_grouptype(v))),
-        ('GroupCategory', lambda v: "Security" if "SECURITY_ENABLED" in convert_grouptype(v) else "Distribution")
-    ],
-    "pwdLastSet": [
-        ('ChangePasswordAtLogon', lambda v: True if v == 0 else False),
-    ],
-})
+ATTR_EXTEND = {
+    "userAccountControl": {
+        'Enabled': lambda v: False if UAC_FLAGS["ACCOUNTDISABLE"] & v else True,
+        'PasswordNeverExpires': lambda v: True if UAC_FLAGS["DONT_EXPIRE_PASSWORD"] & v else False,
+        'AccountNotDelegated': lambda v: True if UAC_FLAGS["NOT_DELEGATED"] & v else False,
+        'PasswordNotRequired': lambda v: True if UAC_FLAGS["PASSWD_NOTREQD"] & v else False,
+    },
+    "groupType": {
+        'GroupScope': lambda v: return_groupscope(convert_grouptype(v)),
+        'GroupCategory': lambda v: "Security" if "SECURITY_ENABLED" in convert_grouptype(v) else "Distribution"
+    },
+    "pwdLastSet": {
+        'ChangePasswordAtLogon': lambda v: True if v == 0 else False,
+    },
+}
 
 
 def object_processing(connect, data, properties, properties_shadow):
     """Основная функция конвертации данных полученных об объекте СК"""
     result = DSDict()
     for attr, values in data.items():
+        # Если есть атрибут со свойством "range", атрибут перезапрашивается, пока не будут получены все значения
         if ';' in attr:
             temp = attr.split(';')[0]
             temp, attr = attr, temp
-            values += search_attribute_range(connect=connect, dn=data['distinguishedName'][0].decode("utf-8"),
-                                             attribute=temp)
+            values += search_attribute_range(
+                connect=connect, dn=data['distinguishedName'][0].decode("utf-8"), attribute=temp
+            )
 
+        # Получение базовых свойств атрибута. Если их нет в библиотеке, атрибут считается мультистроковым
         action = ATTR_TYPES.get(attr, ('unknown', False))
 
-        result[attr] = [TYPE_HANDLERS[action[0]](v) for v in values]
-        result[attr] = result[attr] if not action[1] else result[attr][0]
+        # Получение правила обработки атрибута.
+        # Последовательность:
+        # Либо правило для конкретного атрибута
+        # Либо правило для типа атрибута
+        # Либо значение преобразовывается в hex, для совместимости с JSON
+        handler = ATTR_SPECIAL.get(attr, TYPE_HANDLERS.get(action[0], lambda v: [f"hex:{i.hex()}" for i in v]))
 
+        # Исполнение конвертации значения
+        result[attr] = handler(values)
+
+        # Если атрибут должен содержать одно значение, остаётся только первый элемент
+        result[attr] = result[attr][0] if action[1] else result[attr]
+
+    # Обработка вычисляемых атрибутов
     for attr, rules in ATTR_EXTEND.items():
         if attr in result:
-            for new_key, transform in rules:
-                if new_key.lower() in properties or '*' in properties:
-                    result[new_key] = transform(result[attr])
+            for attr_extend, handler_extend in rules.items():
+                if attr_extend.lower() in properties or '*' in properties:
+                    result[attr_extend] = handler_extend(result[attr])
 
     [result.pop(attr) for attr in properties_shadow if attr in result]
 
@@ -121,7 +119,7 @@ def search_object(connect, _logger, ldap_filter, search_base, properties, type_o
                 continue
 
             # Перебор дополнительных атрибутов
-            for (name_ext, _) in attr_ext:
+            for name_ext, _ in attr_ext.items():
                 if name_ext.lower() in properties_low:
                     properties_shadow += [attr.lower()]
                     properties += [attr.lower()]
