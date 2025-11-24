@@ -32,6 +32,7 @@ def search_attribute_range(connect, dn, attribute):
         if '*' in end:
             break
         else:
-            start = start + 1
+            start = int(end) + 1
+            end = int(end) + step + 1
 
     return all_range
