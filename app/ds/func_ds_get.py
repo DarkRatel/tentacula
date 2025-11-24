@@ -259,10 +259,10 @@ def return_groupscope(flags):
     return RuntimeError("Error Search Flag Group")
 
 
-def c_bool_string_to_bool(data: bytes):
-    if data.decode("utf-8").lower() == 'true':
+def c_bool_string_to_bool(data: str):
+    if data == 'TRUE':
         return True
-    elif data.decode("utf-8").lower() == 'true':
+    elif data == 'FALSE':
         return False
     elif data is None:
         return None
