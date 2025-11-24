@@ -149,6 +149,8 @@ class _AppConfig:
         # Настройка NGINX
         self.NGINX_FILE = _read_any(config=_config, chapter='web', name='NGINX_FILE', default=False)
         if self.NGINX_FILE:
+            os.makedirs(os.path.dirname(self.NGINX_FILE), exist_ok=True)
+
             self.NGINX_FOLDER_LOGS = _read_any(config=_config, chapter='web', name='NGINX_FOLDER_LOGS').rstrip("/")
             os.makedirs(self.NGINX_FOLDER_LOGS, exist_ok=True)
 
