@@ -110,7 +110,7 @@ def search_object(connect, _logger, ldap_filter, search_base, properties, type_o
     if '*' not in properties:
         if 'distinguishedName'.lower() not in properties_low:
             properties += ['distinguishedName']
-        if 'distinguishedName'.lower() not in properties_low:
+        if 'objectClass'.lower() not in properties_low:
             properties += ['objectClass']
 
         for attr, attr_ext in ATTR_EXTEND.items():
