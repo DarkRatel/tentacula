@@ -1,7 +1,4 @@
-user  www-data;
 worker_processes  auto;
-
-pid /run/nginx.pid;
 
 events {
     worker_connections 1024;
@@ -12,7 +9,6 @@ http {
     log_format tentacula '[$time_iso8601] [$request_id] "$remote_addr" "$request" "$status" "$body_bytes_sent" '
                          '"$http_referer" "$http_user_agent" "$ssl_client_serial" "$ssl_client_s_dn"';
 
-    include       /etc/nginx/mime.types;
     default_type  application/octet-stream;
 
     # Логи HTTP-запросов
