@@ -86,3 +86,6 @@ class DSDict(dict):
     def __repr__(self):
         items = ", ".join(f"{k!r}: {v!r}" for k, v in self.items())
         return f"{self.__class__.__name__}({{{items}}})"
+
+    def original_dict(self):
+        return {orig_key: self[orig_key] for orig_key in self.keys()}
