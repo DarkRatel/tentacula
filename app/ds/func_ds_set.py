@@ -104,7 +104,7 @@ def ds_set(connect, _logger, type_object, identity, base, dry_run: bool,
     list_object = temp
 
     _logger.info(f"Set {type_object}: DN: {result['distinguishedName']}, "
-                 f"new value: { {k: ['***'] if k.lower() == 'unicodepwd' else v for k, v in list_object.items()} }, "
+                 f"new value: {[(a, ['***'] if k.lower() == 'unicodepwd' else v, v) for a, k, v in list_object]}, "
                  f"old value: {result}")
 
     if not dry_run:
