@@ -138,13 +138,13 @@ class _AppConfig:
             self.DB_SECRET_KEY = _read_file(self.DB_SECRET_KEY)
 
         # Параметры логирования приложения
-        self.LOGS_FOLDER = _read_any(config=_config, chapter='app', name='LOGS_FOLDER', default='password').rstrip("/")
+        self.LOGS_FOLDER = _read_any(config=_config, chapter='app', name='LOGS_FOLDER').rstrip("/")
         os.makedirs(self.LOGS_FOLDER, exist_ok=True)
 
         self.LOGS_MASK_KEYS = _read_any(config=_config, chapter='app', name='LOGS_MASK_KEYS')
         if self.LOGS_MASK_KEYS:
-            self.LOGS_MASK_KEYS = self.LOGS_MASK_KEYS.split(',')
-            self.LOGS_MASK_KEYS = list(set(self.LOGS_MASK_KEYS + ['password']))
+            self.LOGS_MASK_KEYS = [i.lower() for i in self.LOGS_MASK_KEYS.split(',')]
+            self.LOGS_MASK_KEYS = list(set(self.LOGS_MASK_KEYS + ['password', 'account_password']))
 
         # Настройка NGINX
         self.NGINX_FILE = _read_any(config=_config, chapter='web', name='NGINX_FILE', default=False)
