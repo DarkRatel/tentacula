@@ -14,7 +14,8 @@ def current_user(request: Request) -> User | None:
     """
     logger.info(f"Protocol: {request.headers['x-forwarded-proto'].upper()}, "
                 f"Host name: {request.headers['host']}, "
-                f"Host ip: {request.headers['x-server-ip']}")
+                f"Host ip: {request.headers['x-server-ip']}, "
+                f"URL: {request.url}")
 
     subject = request.headers.get('x-client-subject')
     serial = request.headers.get('x-client-serial')
