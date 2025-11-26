@@ -38,7 +38,4 @@ async def sucker_root_get(user: User = Depends(current_user)) -> JSONResponse:
                 "params": params
             })
 
-    return JSONResponse(
-        ResponseFrom(username=str(user), successfully=True, answer=routes_info).model_dump(),
-        status_code=status.HTTP_200_OK
-    )
+    return JSONResponse(content=routes_info, status_code=status.HTTP_200_OK)
