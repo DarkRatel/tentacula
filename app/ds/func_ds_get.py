@@ -97,10 +97,6 @@ def object_processing(connect, _logger, data, properties, properties_shadow):
 # Регулярное выражение для парсинга строки поиска
 pattern = re.compile(r'\(([A-Za-z0-9]*)([><~]?=)((?:\([^=]*\)|\),|[^)])+)\)(?=$|[)(])')
 
-dn_simple = re.compile(
-    r'^[A-Za-z][A-Za-z0-9-]*=[^,]+(,[A-Za-z][A-Za-z0-9-]*=[^,]+)*$'
-)
-
 
 def repl(m):
     """Функция для изоляции значений в строке поиска"""
