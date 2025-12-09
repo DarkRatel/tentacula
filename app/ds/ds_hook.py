@@ -77,7 +77,7 @@ class DSHook:
         self._connect.simple_bind_s(self._login, self._password)
 
         # Если область каталога не определена, производится запрос для установки области работы
-        self.base = self.base if self.base else search_root_dse(connect=self._connect)
+        self.base = self.base if self.base else search_root_dse(connect=self._connect, _logger=self._logger)
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
