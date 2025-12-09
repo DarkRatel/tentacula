@@ -54,7 +54,7 @@ ATTR_EXTEND = {
 }
 
 
-def object_processing(connect, data, properties, properties_shadow):
+def object_processing(connect, _logger, data, properties, properties_shadow):
     """Основная функция конвертации данных полученных об объекте СК"""
     result = DSDict()
     for attr, values in data.items():
@@ -63,7 +63,7 @@ def object_processing(connect, data, properties, properties_shadow):
             temp = attr.split(';')[0]
             temp, attr = attr, temp
             values += search_attribute_range(
-                connect=connect, dn=data['distinguishedName'][0].decode("utf-8"), attribute=temp
+                connect=connect, dn=data['distinguishedName'][0].decode("utf-8"), attribute=temp, _logger=_logger
             )
 
         # Получение базовых свойств атрибута. Если их нет в библиотеке, атрибут считается мультистроковым
@@ -94,8 +94,25 @@ def object_processing(connect, data, properties, properties_shadow):
     return result
 
 
+# Регулярное выражение для парсинга строки поиска
+pattern = re.compile(r'\(([A-Za-z0-9]*)([><~]?=)((?:\([^=]*\)|\),|[^)])+)\)(?=$|[)(])')
+
+dn_simple = re.compile(
+    r'^[A-Za-z][A-Za-z0-9-]*=[^,]+(,[A-Za-z][A-Za-z0-9-]*=[^,]+)*$'
+)
+
+
+def repl(m):
+    """Функция для изоляции значений в строке поиска"""
+    value = m.group(3)
+    return f"({m.group(1)}{m.group(2)}{ldap.filter.escape_filter_chars(value)})"
+
+
 def search_object(connect, _logger, ldap_filter, search_base, properties, type_object,
                   search_scope: DS_TYPE_SCOPE = "subtree", only_one: bool = False):
+    _logger.debug(f"SOURCE ldap_filter: {ldap_filter}")
+    ldap_filter = pattern.sub(repl, ldap_filter)
+
     ldap_filter = DataDSLDAP[type_object.upper()].unit(ldap_filter)
 
     if only_one and '*' in ldap_filter:
@@ -154,8 +171,8 @@ def search_object(connect, _logger, ldap_filter, search_base, properties, type_o
 
         for one_object in objects:
             if one_object[0]:
-                total_results.append(object_processing(connect=connect, data=one_object[1],
-                                                       properties=properties, properties_shadow=properties_shadow))
+                total_results.append(object_processing(connect=connect, data=one_object[1], properties=properties,
+                                                       properties_shadow=properties_shadow, _logger=_logger))
 
         pctrls = [c for c in server_sprc if c.controlType == SimplePagedResultsControl.controlType]
         if pctrls:
@@ -207,7 +224,7 @@ def gen_filter_to_id(identity: str | DSDict, type_object: DS_TYPE_OBJECT_SYSTEM 
     if 'sAMAccountName' in identity and type_object in ["user", "computer", "group", "member"]:
         search_line = f"(sAMAccountName={identity['sAMAccountName']})"
     elif 'distinguishedName' in identity:
-        search_line = f"(distinguishedName={ldap.filter.escape_filter_chars(identity['distinguishedName'])})"
+        search_line = f"(distinguishedName={identity['distinguishedName']})"
     elif 'ObjectGUID' in identity:
         search_line = f"(ObjectGUID={identity['distinguishedName']})"
     elif 'objectSid' in identity:
