@@ -411,7 +411,7 @@ class DSHook:
             'description': description,
         })
 
-        ds_set(connect=self._connect, type_object="contact", identity=identity, base=self.base,
+        ds_set(connect=self._connect, dry_run=self.dry_run, type_object="contact", identity=identity, base=self.base,
                remove=remove, add=add, replace=replace, clear=clear, special=special, _logger=self._logger)
 
     def set_account_password(self, identity: str | DSDict, account_password: str) -> None:
