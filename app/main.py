@@ -4,12 +4,17 @@ import importlib
 from fastapi import FastAPI, Request
 from contextlib import asynccontextmanager
 from jinja2 import Template
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from app.systems.config import AppConfig
 from app.systems.logging import logger, s_id_ctx_var, setup_logging
+from app.systems.database import init_db
 
 # Настройка root'ового logging, для перехвата всех данных выводимых в логгер
 setup_logging()
+
+if any([AppConfig.SCHEDULERS_ENABLED, AppConfig.SCHEDULERS_DS]):
+    scheduler = AsyncIOScheduler()
 
 
 @asynccontextmanager
@@ -20,6 +25,7 @@ async def lifespan(app: FastAPI):
     logger.info(f" SCHEDULERS_ENABLED: {AppConfig.SCHEDULERS_ENABLED}")
     logger.info(f"      SCHEDULERS_DS: {AppConfig.SCHEDULERS_DS}")
 
+    # Блок настройки NGINX-файла
     if AppConfig.NGINX_FILE:
         logger.info(f"Generate NGINX Conf: {AppConfig.NGINX_FILE}")
 
@@ -39,7 +45,23 @@ async def lifespan(app: FastAPI):
     else:
         logger.info(f"Skip Generate NGINX Conf")
 
-    yield
+    # Блок включения приложения
+
+    # Если шедуллер активен
+    if any([AppConfig.SCHEDULERS_ENABLED, AppConfig.SCHEDULERS_DS]):
+
+        if AppConfig.SCHEDULERS_DS:
+            logger.info("Generate table for SCHEDULERS_DS")
+            await init_db()
+
+        logger.info("Run scheduler...")
+        scheduler.start()
+        yield  # Запуск самого FastAPI
+        logger.info("...stop scheduler")
+        scheduler.shutdown()
+    # Запуск без шедуллера
+    else:
+        yield  # Запуск самого FastAPI
 
 
 app = FastAPI(lifespan=lifespan)
@@ -74,3 +96,7 @@ if AppConfig.SUCKERS_DS:
         importlib.import_module(f"app.sites.ds.{i}")
 
     app.include_router(router_ds)
+
+# Импорт шеделлера для работы с DS, если включен
+if AppConfig.SCHEDULERS_DS:
+    importlib.import_module(f"app.scheduler.ds")
