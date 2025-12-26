@@ -7,3 +7,4 @@
 tentacula_env.tar.gz
 Dockerfile
 supervisord.conf
+docker-compose.yml
