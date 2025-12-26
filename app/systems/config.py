@@ -1,6 +1,8 @@
+import base64
 import os
 import json
 
+from cryptography.hazmat.primitives import serialization
 from dotenv import load_dotenv
 from configparser import ConfigParser
 
@@ -133,9 +135,17 @@ class _AppConfig:
         if self.SCHEDULERS_DS:
             self.DB_ASYNC_URL = _read_any(config=_config, chapter='app', name='DB_ASYNC_URL', default=None)
             self.DB_ASYNC_URL = _read_file(self.DB_ASYNC_URL)
+            if 'cat ' in self.DB_ASYNC_URL:
+                with open(self.DB_ASYNC_URL.replace('cat ', ''), 'r') as file:
+                    self.DB_ASYNC_URL = file.read()
 
-            self.DB_SECRET_KEY = _read_any(config=_config, chapter='app', name='DB_SECRET_KEY', default=None)
-            self.DB_SECRET_KEY = _read_file(self.DB_SECRET_KEY)
+            self.SECRET_KEY = _read_any(config=_config, chapter='app', name='SECRET_KEY', default=None)
+            self.SECRET_KEY = _read_file(self.SECRET_KEY)
+            if 'cat ' in self.SECRET_KEY:
+                with open(self.SECRET_KEY.replace('cat ', ''), 'r') as file:
+                    self.SECRET_KEY = file.read()
+            self.SECRET_KEY = base64.b64decode(self.SECRET_KEY.encode('utf-8'))
+            self.SECRET_KEY = serialization.load_pem_private_key(self.SECRET_KEY, password=None)
 
         # Параметры логирования приложения
         self.LOGS_FOLDER = _read_any(config=_config, chapter='app', name='LOGS_FOLDER').rstrip("/")
