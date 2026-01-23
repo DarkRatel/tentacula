@@ -111,7 +111,7 @@ def _read_json(config: ConfigParser, chapter: str, name: str, default=None) -> d
 class _AppConfig:
     def __init__(self):
         _config = ConfigParser()
-        _config.read(CONFIG_PATH)
+        _config.read(CONFIG_PATH, encoding='utf-8-sig')
 
         # Настройка сочлинения
         self.COMPOSITION_ENABLED = _read_bool(config=_config, chapter='app', name='COMPOSITION_ENABLED', default=False)
