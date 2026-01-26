@@ -171,5 +171,11 @@ class _AppConfig:
 
         self.TRANSIT = _read_json(config=_config, chapter='composition', name='TRANSIT', default=None)
 
+        self.AUTHENTICATION_TYPE = _read_any(config=_config, chapter='security', name='AUTHENTICATION_TYPE')
+        if self.AUTHENTICATION_TYPE not in ["CERTIFICATE", ""]:
+            raise ValueError('AUTHENTICATION_TYPE must be CERTIFICATE or None')
+        if self.AUTHENTICATION_TYPE:
+            self.LIST_OF_CERTIFICATES = _read_any(config=_config, chapter='security', name='LIST_OF_CERTIFICATES')
+            self.LIST_OF_CERTIFICATES = json.loads(self.LIST_OF_CERTIFICATES)
 
 AppConfig = _AppConfig()
