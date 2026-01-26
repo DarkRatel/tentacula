@@ -8,7 +8,6 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from app.systems.config import AppConfig
 from app.systems.logging import logger, s_id_ctx_var, setup_logging
-from app.systems.database import init_db
 
 # Настройка root'ового logging, для перехвата всех данных выводимых в логгер
 setup_logging()
@@ -48,9 +47,11 @@ async def lifespan(app: FastAPI):
     # Блок включения приложения
 
     # Если шедуллер активен
-    if any([AppConfig.SCHEDULERS_ENABLED, AppConfig.SCHEDULERS_DS]):
+    if AppConfig.SCHEDULERS_ENABLED or AppConfig.SCHEDULERS_DS:
 
         if AppConfig.SCHEDULERS_DS:
+            from app.systems.database import init_db
+
             logger.info("Generate table for SCHEDULERS_DS")
             await init_db()
 
