@@ -12,8 +12,8 @@ class SpecData(BaseModel):
     terms_2: int
 
 
-# Функция, которая будет исполнена на сервере
-def addition(terms_1: int, terms_2: int):
+# Функция, которая будет исполнена на сервере. Требуется, чтобы она была типа async
+async def addition(terms_1: int, terms_2: int):
     # Для фиксации данных в логах требуется использовать "logger"
     logger.info("Hello world!")
 
