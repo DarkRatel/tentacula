@@ -16,7 +16,8 @@ class SpecData(BaseModel):
     identity: str | Type[DSDict]
 
 
-def get_group_member(login: str, password: str, host: str, identity: str | DSDict, base: str = None):
+async def get_group_member(login: str, password: str, host: str, identity: str | DSDict,
+                           base: str = None) -> list[DSDict]:
     with DSHook(login=login, password=password, host=host, port=636, base=base) as ds:
         result = ds.get_group_member(
             identity=identity

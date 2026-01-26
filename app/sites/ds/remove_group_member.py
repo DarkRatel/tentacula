@@ -16,13 +16,12 @@ class SpecData(BaseModel):
     members: str | Type[DSDict] | list[str] | tuple[str] | list[Type[DSDict]]
 
 
-def remove_group_member(login: str, password: str, host: str, identity: str | DSDict,
-                        members: str | DSDict | list[str] | tuple[str] | list[DSDict], base: str = None):
+async def remove_group_member(login: str, password: str, host: str, identity: str | DSDict,
+                              members: str | DSDict | list[str] | tuple[str] | list[DSDict], base: str = None):
     with DSHook(login=login, password=password, host=host, port=636, base=base) as ds:
         ds.remove_group_member(
             identity=identity,
             members=members
-
         )
 
 

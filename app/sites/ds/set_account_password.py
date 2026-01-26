@@ -16,8 +16,8 @@ class SpecData(BaseModel):
     account_password: str
 
 
-def set_account_password(login: str, password: str, host: str, identity: str | DSDict, account_password: str,
-                         base: str = None):
+async def set_account_password(login: str, password: str, host: str, identity: str | DSDict, account_password: str,
+                               base: str = None):
     with DSHook(login=login, password=password, host=host, port=636, base=base) as ds:
         ds.set_account_password(
             identity=identity,

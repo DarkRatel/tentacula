@@ -15,7 +15,7 @@ class SpecData(BaseModel):
     identity: str | Type[DSDict]
 
 
-def remove_computer(login: str, password: str, host: str, identity: str | DSDict, base: str = None):
+async def remove_computer(login: str, password: str, host: str, identity: str | DSDict, base: str = None):
     with DSHook(login=login, password=password, host=host, port=636, base=base) as ds:
         ds.remove_computer(
             identity=identity

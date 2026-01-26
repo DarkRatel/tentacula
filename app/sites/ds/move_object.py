@@ -16,7 +16,7 @@ class SpecData(BaseModel):
     target_path: str
 
 
-def move_object(login: str, password: str, host: str, identity: str | DSDict, target_path: str, base: str = None):
+async def move_object(login: str, password: str, host: str, identity: str | DSDict, target_path: str, base: str = None):
     with DSHook(login=login, password=password, host=host, port=636, base=base) as ds:
         ds.move_object(
             identity=identity,

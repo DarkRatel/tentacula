@@ -28,12 +28,12 @@ class SpecData(BaseModel):
     account_expiration_date: bool | datetime = None
 
 
-def set_user(login: str, password: str, host: str, identity: str | DSDict, base: str = None,
-             remove: dict = None, add: dict[str, list] = None,
-             replace: dict[str, list] = None, clear: list[str] = None, display_name: str = None,
-             sam_account_name: str = None, user_principal_name: str = None, enabled: bool = None,
-             password_never_expires: bool = None, account_not_delegated: bool = None,
-             change_password_at_logon: bool = None, account_expiration_date: bool | datetime = None):
+async def set_user(login: str, password: str, host: str, identity: str | DSDict, base: str = None,
+                   remove: dict = None, add: dict[str, list] = None,
+                   replace: dict[str, list] = None, clear: list[str] = None, display_name: str = None,
+                   sam_account_name: str = None, user_principal_name: str = None, enabled: bool = None,
+                   password_never_expires: bool = None, account_not_delegated: bool = None,
+                   change_password_at_logon: bool = None, account_expiration_date: bool | datetime = None):
     with DSHook(login=login, password=password, host=host, port=636, base=base) as ds:
         ds.set_user(
             identity=identity,

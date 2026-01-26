@@ -16,8 +16,8 @@ class SpecData(BaseModel):
     members: str | Type[DSDict] | list[str] | tuple[str] | list[Type[DSDict]]
 
 
-def add_group_member(login: str, password: str, host: str, identity: str | DSDict,
-                     members: str | DSDict | list[str] | tuple[str] | list[DSDict], base: str = None):
+async def add_group_member(login: str, password: str, host: str, identity: str | DSDict,
+                           members: str | DSDict | list[str] | tuple[str] | list[DSDict], base: str = None):
     with DSHook(login=login, password=password, host=host, port=636, base=base) as ds:
         ds.add_group_member(
             identity=identity,

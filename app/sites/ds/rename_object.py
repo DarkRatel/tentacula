@@ -16,8 +16,8 @@ class SpecData(BaseModel):
     new_name: str
 
 
-def rename_object(login: str, password: str, host: str, identity: str | DSDict, new_name: str,
-                  base: str = None):
+async def rename_object(login: str, password: str, host: str, identity: str | DSDict, new_name: str,
+                        base: str = None):
     with DSHook(login=login, password=password, host=host, port=636, base=base) as ds:
         ds.rename_object(
             identity=identity,

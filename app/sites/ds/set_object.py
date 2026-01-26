@@ -21,9 +21,9 @@ class SpecData(BaseModel):
     display_name: str = None
 
 
-def set_object(login: str, password: str, host: str, identity: str | DSDict,
-               base: str = None, remove: dict = None, add: dict[str, list] = None,
-               replace: dict[str, list] = None, clear: list[str] = None, display_name: str = None):
+async def set_object(login: str, password: str, host: str, identity: str | DSDict,
+                     base: str = None, remove: dict = None, add: dict[str, list] = None,
+                     replace: dict[str, list] = None, clear: list[str] = None, display_name: str = None):
     with DSHook(login=login, password=password, host=host, port=636, base=base) as ds:
         ds.set_object(
             identity=identity,
