@@ -163,9 +163,6 @@ class SDSHook:
         self._login = login
         self._password = password
         self._host = host
-        self._login = login
-        self._password = password
-        self._host = host
         self._url = url
         self._port = port
         self._public_key = public_key
