@@ -58,10 +58,8 @@ class SafeFormatter(logging.Formatter):
 
 LOG_FORMAT = "[%(asctime)s] [%(s_id)s|%(levelname)s|%(name)s] %(message)s"
 
-file_handler = RotatingFileHandler(
+file_handler = logging.FileHandler(
     f'{AppConfig.LOGS_FOLDER}/api.log',
-    maxBytes=10 * 1024 * 1024,
-    backupCount=5,
     encoding="utf-8"
 )
 file_handler.setFormatter(SafeFormatter(LOG_FORMAT))
