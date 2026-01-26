@@ -6,8 +6,19 @@ events {
 
 http {
     # Формат обычных логов
-    log_format tentacula '[$time_iso8601] [$request_id] "$remote_addr" "$request" "$status" "$body_bytes_sent" '
-                         '"$http_referer" "$http_user_agent" "$ssl_client_serial" "$ssl_client_s_dn"';
+    # $time_iso8601 - Дата и время в формате ISO 8601
+    # $request_id - Уникальный идентификатор запроса
+    # $remote_addr - IP-адрес клиента
+    # $request - Полная строка HTTP-запроса (<method> <URI> <protocol>)
+    # $status - HTTP-код ответа
+    # $body_bytes_sent - Количество байт тела ответа, отправленных клиенту (без заголовков)
+    # $http_referer - Значение HTTP-заголовка Referer (откуда пришёл пользователь)
+    # $http_user_agent - Значение HTTP-заголовка User-Agent
+    # $ssl_client_serial - Серийный номер клиентского SSL-сертификата
+    # $ssl_client_s_dn - Distinguished Name (DN) (subject) субъекта клиентского сертификата
+    log_format tentacula '[$time_iso8601] [$request_id] "$remote_addr" "$request" "$status" "$body_bytes_sent"'
+                         ' "$http_referer" "$http_user_agent"'
+                         ' Cert serial: "$ssl_client_serial" Cert subject: "$ssl_client_s_dn"';
 
     default_type  application/octet-stream;
 
@@ -16,7 +27,7 @@ http {
     error_log  {{ folder_logs }}/nginx_error.log info;
 
     sendfile          on;
-    keepalive_timeout 900;
+    keepalive_timeout 30s; # Время, в течение которого уже завершённое HTTP-соединение остаётся открытым
 
     server {
         listen      {{ port }} ssl;
@@ -41,10 +52,10 @@ http {
             proxy_http_version 1.1;           # Поддержка HTTP 1.1 для стриминга контента
             proxy_set_header   Connection ""; # Переназначение заголовка Connection
 
-            proxy_connect_timeout 900;
-            proxy_send_timeout    900;
-            proxy_read_timeout    900;
-            send_timeout          900;
+            proxy_connect_timeout 10; # Время, за которое NGINX должен установить TCP-соединение (TLS, backend)
+            proxy_send_timeout    300s; # Время ожидания между отправкой частей запроса от NGINX
+            proxy_read_timeout    300s; # Максимальное время ожидания между байтами ответа
+            send_timeout          900s; # Время ожидания между отправкой байт ответа от NGINX → клиенту
 
             proxy_set_header X-Forwarded-Proto $scheme;                    # Протокол подключения
             proxy_set_header Host              $host;                      # Имя хоста (сервера)
