@@ -1,7 +1,8 @@
 import json
-from typing import Callable, Union, Type
+from typing import Callable, Union, Type, Awaitable
 from datetime import datetime, date
 
+import asyncio
 from pydantic import BaseModel
 from fastapi import APIRouter, status, Depends, Request
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -11,23 +12,60 @@ from app.systems.logging import logger
 from app.ds import DSDict
 
 STEP = 1500  # Общая переменная шага для списков, которые будут возвращены
+BEFORE_ANSWERING = 15  # Пауза в секундах, перед тем, как эндпоинт передаст пустой байт для активности в сессии
+ReturnType = Union[int, str, float, list, tuple, dict, bool, None]
 
 
-async def json_stream(lst: list | tuple | set):
+async def stream_result(func, param):
+    logger.info("======Function======")
+    yield "{"
+    yield '"waiting": "'
+
+    result = None
     try:
+        task = asyncio.create_task(func(**param))
+
+        pause_active = BEFORE_ANSWERING
+        while not task.done():
+            await asyncio.sleep(1)
+            pause_active -= 1
+
+            if pause_active <= 0:
+                pause_active = BEFORE_ANSWERING
+                yield ''
+
+        result = task.result()
+        error = False
+    except Exception as e:
+        logger.warning(f"Stream interrupted: {e}")
+        result = e
+        error = True
+
+    yield '", '
+
+    yield f'"error": {str(error).lower()}, '
+
+    yield '"details": '
+
+    if isinstance(result, list):
         yield "["  # начало массива
 
-        for l in range(0, len(lst), STEP):
+        for l in range(0, len(result), STEP):
             end = l + STEP
-            split = ',' if end <= len(lst) else ''
-            yield ','.join([json.dumps(json_encoder(i)) for i in lst[l:end]]) + split
+            split = ',' if end <= len(result) else ''
+            yield ','.join([json.dumps(json_encoder(i)) for i in result[l:end]]) + split
 
         yield "]"  # конец массива
 
-    except Exception as e:
-        logger.warning(f"Stream interrupted: {e}")
-    finally:
-        lst = None
+    elif result is None:
+        yield "null"
+    elif isinstance(result, dict):
+        yield json.dumps(json_encoder(result))
+    else:
+        yield str(json.dumps(str(result), ensure_ascii=False))
+
+    yield "}"
+    logger.info("======End======")
 
 
 def json_encoder(obj):
@@ -51,7 +89,8 @@ def json_encoder(obj):
 
 
 def create_post(endpoint: str, base_model: Type[BaseModel],
-                func: Callable[..., Union[int, str, float, list, tuple, dict, bool, None]], router: APIRouter):
+                func: Callable[..., Awaitable[ReturnType]],
+                router: APIRouter):
     """
     Функция генерации присосок.
     Если присоска предполагает возращение списка, он будет возращён частями, если элементов больше 1500 (по умолчанию).
@@ -83,23 +122,12 @@ def create_post(endpoint: str, base_model: Type[BaseModel],
 
                 # Вывод входных данных в логи
                 logger.info("Input data: %s", input_dada)
-                logger.info("======Function======")
-                # Исполнение функции
-                result = func(**input_dada)
-                logger.info("====================")
 
-                if isinstance(result, list) and len(result) > STEP:
-                    return StreamingResponse(json_stream(result), media_type="text/event-stream")
-
-                return JSONResponse(content=json_encoder(result), status_code=status.HTTP_200_OK)
+                return StreamingResponse(stream_result(func, input_dada), media_type="text/event-stream")
 
             except Exception as result:
                 logger.error(f"ERROR: {result}")
                 return JSONResponse(content=str(result), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
-            finally:
-                # Обнуление результатов
-                result = None
-                logger.error(f"DONE")
 
         # Изменение имя функции метода по формуле, для избегания повторений в именах функций
         path_function_wrapper.__name__ = f"{route_name}_{name_func}_post"
