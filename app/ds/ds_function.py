@@ -24,7 +24,7 @@ def search_attribute_range(connect, dn, attribute, _logger):
     start = int(attribute.split(';range=')[1].split('-')[1]) + 1  # От кого числа в массиве начинается
     end = start + step  # До кого числа возвращаться
 
-    search_base = ldap.SCOPE_ONELEVEL
+    search_base = ldap.SCOPE_SUBTREE
     ldap_filter = "(objectClass=*)"
 
     while True:

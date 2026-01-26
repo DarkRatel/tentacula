@@ -80,18 +80,22 @@ def ds_set(connect, _logger, type_object, identity, base, dry_run: bool,
     )[0]
 
     for key in special_attr:
-        handler = ATTR_PROCESSING.get(key, ATTR_PROCESSING['_default_'])
-
-        result[key] = [handler(result[key], special[key])]
-        print(result[key])
-
         if key in result:
-            list_object.append((ldap.MOD_REPLACE, key, result[key]))
+            handler = ATTR_PROCESSING.get(key, ATTR_PROCESSING['_default_'])
+            result[key] = [handler(result[key], special[key])]
+            action = ldap.MOD_REPLACE
         else:
-            list_object.append((ldap.MOD_ADD, key, result[key]))
+            result = special[key]
+            action = ldap.MOD_ADD
+
+        list_object.append((action, key, result[key] if isinstance(result[key], list) else [result[key]]))
 
     if not list_object:
         raise RuntimeError("Нет данных для изменения")
+
+    _logger.info(f"Set {type_object}: DN: {result['distinguishedName']}, "
+                 f"new value: {[(a, k, ['***'] if k.lower() == 'unicodepwd' else v) for a, k, v in list_object]}, "
+                 f"old value: {result}")
 
     temp = []
     for (action, key, values) in list_object:
@@ -103,9 +107,9 @@ def ds_set(connect, _logger, type_object, identity, base, dry_run: bool,
             temp += [(action, key, [v.encode("utf-8") for v in values])]
     list_object = temp
 
-    _logger.info(f"Set {type_object}: DN: {result['distinguishedName']}, "
-                 f"new value: {[(a, ['***'] if k.lower() == 'unicodepwd' else v, v) for a, k, v in list_object]}, "
-                 f"old value: {result}")
+    _logger.debug(f"Set {type_object}: DN: {result['distinguishedName']}, "
+                  f"new value: {[(a, k, ['***'] if k.lower() == 'unicodepwd' else v) for a, k, v in list_object]}, "
+                  f"old value: {result}")
 
     if not dry_run:
         connect.modify_s(result['distinguishedName'], list_object)

@@ -101,7 +101,7 @@ pattern = re.compile(r'\(([A-Za-z0-9]*)([><~]?=)((?:\([^=]*\)|\),|[^)])+)\)(?=$|
 def repl(m):
     """Функция для изоляции значений в строке поиска"""
     value = m.group(3)
-    return f"({m.group(1)}{m.group(2)}{ldap.filter.escape_filter_chars(value)})"
+    return f"({m.group(1)}{m.group(2)}{ldap.filter.escape_filter_chars(value)})".replace(r"\2a", "*")
 
 
 def search_object(connect, _logger, ldap_filter, search_base, properties, type_object,
@@ -251,7 +251,7 @@ def c_datetime_unicode_to_python(data: bytes):
 
 
 def c_datetime_win_to_python(data: bytes):
-    if data in [b'9223372036850000000', b'9223372036854775807', b'0']:
+    if data in [b'0', b'9223372036850000000', b'9223372036854775807', b'-9223372036854775808']:
         return int(data.decode("utf-8"))
 
     return (datetime(1601, 1, 1, tzinfo=datetime.now().astimezone().tzinfo) +
