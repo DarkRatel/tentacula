@@ -140,25 +140,26 @@ class SDSHook:
             port = _config.port
             base = _config.schema
 
-            _data = json.loads(_config.get_extra())
-            url = _data.get("url", None)
-            public_key = _data.get("public_key", None)
+            if _config.get_extra():
+                _data = json.loads(_config.get_extra())
+                url = _data.get("url", None)
+                public_key = _data.get("public_key", None)
 
-            cert_root = _data.get("cert_root", None)
-            cert_file = _data.get("cert_file", None)
-            cert_key = _data.get("cert_key", None)
-            dry_run = _data.get("dry_run", None)
-            log_level = _data.get("log_level", None)
-            timeout = _data.get("timeout", None)
+                cert_root = _data.get("cert_root", None)
+                cert_file = _data.get("cert_file", None)
+                cert_key = _data.get("cert_key", None)
+                dry_run = _data.get("dry_run", None)
+                log_level = _data.get("log_level", logging.INFO)
+                timeout = _data.get("timeout", None)
 
-            db_conn_id = _data.get("db_conn_id", None)
-            if db_conn_id:
-                _config = BaseHook.get_connection(db_conn_id)
-                db_login = _config.login
-                db_password = _config.password
-                db_host = _config.host
-                db_port = _config.port
-                database = _config.schema
+                db_conn_id = _data.get("db_conn_id", None)
+                if db_conn_id:
+                    _config = BaseHook.get_connection(db_conn_id)
+                    db_login = _config.login
+                    db_password = _config.password
+                    db_host = _config.host
+                    db_port = _config.port
+                    database = _config.schema
 
         self._login = login
         self._password = password
