@@ -8,6 +8,7 @@ DS_GROUP_SCOPE = typing.Literal["DomainLocal", "Global", "Universal"]
 DS_GROUP_CATEGORY = typing.Literal["Security", "Distribution"]
 DS_ACTION_MEMBER = typing.Literal["add", "remove"]
 
+
 class DataDSLDAP(Enum):
     """
     LDAP-фильтры типов объектов. Функция <unit> используется для объединения исходного LDAP-запроса с типом объекта
