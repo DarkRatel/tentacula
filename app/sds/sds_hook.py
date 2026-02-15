@@ -301,7 +301,7 @@ class SDSHook:
             raise ValueError("Не удалось определить тип подключения")
 
     def get_object(
-            self, identity: str | DSDict = None, ldap_filter: str = None,
+            self, identity: str | dict | DSDict = None, ldap_filter: str = None,
             properties: str | list | tuple = None, search_scope: DS_TYPE_SCOPE = "subtree",
             type_object: DS_TYPE_OBJECT = "object"
     ) -> list[DSDict]:
@@ -327,7 +327,7 @@ class SDSHook:
         return self.query(type_query, param_query)
 
     def get_user(
-            self, identity: str | DSDict = None, ldap_filter: str = None,
+            self, identity: str | dict | DSDict = None, ldap_filter: str = None,
             properties: str | list | tuple = None, search_scope: DS_TYPE_SCOPE = "subtree"
     ) -> list[DSDict]:
         """
@@ -350,7 +350,7 @@ class SDSHook:
         return self.query(type_query, param_query)
 
     def get_group(
-            self, identity: str | DSDict = None, ldap_filter: str = None,
+            self, identity: str | dict | DSDict = None, ldap_filter: str = None,
             properties: str | list | tuple = None, search_scope: DS_TYPE_SCOPE = "subtree"
     ) -> list[DSDict]:
         """
@@ -373,7 +373,7 @@ class SDSHook:
         return self.query(type_query, param_query)
 
     def get_computer(
-            self, identity: str | DSDict = None, ldap_filter: str = None,
+            self, identity: str | dict | DSDict = None, ldap_filter: str = None,
             properties: str | list | tuple = None, search_scope: DS_TYPE_SCOPE = "subtree"
     ) -> list[DSDict]:
         """
@@ -396,7 +396,7 @@ class SDSHook:
         return self.query(type_query, param_query)
 
     def get_contact(
-            self, identity: str | DSDict = None, ldap_filter: str = None,
+            self, identity: str | dict | DSDict = None, ldap_filter: str = None,
             properties: str | list | tuple = None, search_scope: DS_TYPE_SCOPE = "subtree"
     ) -> list[DSDict]:
         """
@@ -418,7 +418,7 @@ class SDSHook:
 
         return self.query(type_query, param_query)
 
-    def get_group_member(self, identity: str | DSDict) -> list[DSDict]:
+    def get_group_member(self, identity: str | dict | DSDict) -> list[DSDict]:
         """
         Функция получения всех членов группы, с дополнительными атрибутами.
 
@@ -434,7 +434,7 @@ class SDSHook:
 
         return self.query(type_query, param_query)
 
-    def set_object(self, identity: str | DSDict, remove: dict = None, add: dict[str, list] = None,
+    def set_object(self, identity: str | dict | DSDict, remove: dict = None, add: dict[str, list] = None,
                    replace: dict[str, list] = None, clear: list[str] = None, display_name: str = None,
                    description: str = None) -> None:
         """
@@ -457,7 +457,7 @@ class SDSHook:
 
         return self.query(type_query, param_query)
 
-    def set_user(self, identity: str | DSDict, remove: dict = None, add: dict[str, list] = None,
+    def set_user(self, identity: str | dict | DSDict, remove: dict = None, add: dict[str, list] = None,
                  replace: dict[str, list] = None, clear: list[str] = None, display_name: str = None,
                  description: str = None, sam_account_name: str = None, user_principal_name: str = None,
                  enabled: bool = None, password_never_expires: bool = None, account_not_delegated: bool = None,
@@ -494,7 +494,7 @@ class SDSHook:
 
         return self.query(type_query, param_query)
 
-    def set_group(self, identity: str | DSDict, remove: dict = None, add: dict[str, list] = None,
+    def set_group(self, identity: str | dict | DSDict, remove: dict = None, add: dict[str, list] = None,
                   replace: dict[str, list] = None, clear: list[str] = None, display_name: str = None,
                   description: str = None, sam_account_name: str = None,
                   group_scope: DS_GROUP_SCOPE = None, group_category: DS_GROUP_CATEGORY = None) -> None:
@@ -522,7 +522,7 @@ class SDSHook:
 
         return self.query(type_query, param_query)
 
-    def set_computer(self, identity: str | DSDict, remove: dict = None, add: dict[str, list] = None,
+    def set_computer(self, identity: str | dict | DSDict, remove: dict = None, add: dict[str, list] = None,
                      replace: dict[str, list] = None, clear: list[str] = None, display_name: str = None,
                      description: str = None) -> None:
         """
@@ -545,7 +545,7 @@ class SDSHook:
 
         return self.query(type_query, param_query)
 
-    def set_contact(self, identity: str | DSDict, remove: dict = None, add: dict[str, list] = None,
+    def set_contact(self, identity: str | dict | DSDict, remove: dict = None, add: dict[str, list] = None,
                     replace: dict[str, list] = None, clear: list[str] = None, display_name: str = None,
                     description: str = None) -> None:
         """
@@ -568,7 +568,7 @@ class SDSHook:
 
         return self.query(type_query, param_query)
 
-    def set_account_password(self, identity: str | DSDict, account_password: str) -> None:
+    def set_account_password(self, identity: str | dict | DSDict, account_password: str) -> None:
         """
         Функция изменения пароля пользователя в DS. Принудительно снимает флаг "PASSWD_NOTREQD"
 
@@ -583,7 +583,7 @@ class SDSHook:
 
         return self.query(type_query, param_query)
 
-    def set_account_unlock(self, identity: str | DSDict) -> None:
+    def set_account_unlock(self, identity: str | dict | DSDict) -> None:
         """
         Функция снятия временной блокировки пользователя в DS (distinguishedName, objectGUID, objectSid, sAMAccountName или словарь объекта DS (DSDict)).
 
@@ -596,8 +596,8 @@ class SDSHook:
 
         return self.query(type_query, param_query)
 
-    def add_group_member(self, identity: str | DSDict,
-                         members: str | DSDict | list[str] | tuple[str] | list[DSDict]) -> None:
+    def add_group_member(self, identity: str | dict | DSDict,
+                         members: str | dict | DSDict | list[str] | tuple[str] | list[DSDict]) -> None:
         """
         Функция добавления объектов в группу. Члены добавляются последовательно (один член, один запрос)
 
@@ -611,8 +611,8 @@ class SDSHook:
 
         return self.query(type_query, param_query)
 
-    def remove_group_member(self, identity: str | DSDict,
-                            members: str | DSDict | list[str] | tuple[str] | list[DSDict]) -> None:
+    def remove_group_member(self, identity: str | dict | DSDict,
+                            members: str | dict | DSDict | list[str] | tuple[str] | list[DSDict]) -> None:
         """
         Функция добавления объектов в группу. Члены удаляются последовательно (один член, один запрос)
 
@@ -626,7 +626,7 @@ class SDSHook:
 
         return self.query(type_query, param_query)
 
-    def move_object(self, identity: str | DSDict, target_path: str) -> None:
+    def move_object(self, identity: str | dict | DSDict, target_path: str) -> None:
         """
         Функция перемещения объектов между Организационными юнитами (изменяется distinguishedName).
 
@@ -640,7 +640,7 @@ class SDSHook:
 
         return self.query(type_query, param_query)
 
-    def rename_object(self, identity: str | DSDict, new_name: str) -> None:
+    def rename_object(self, identity: str | dict | DSDict, new_name: str) -> None:
         """
         Функция переименования объекта (изменяются атрибуты cn, name и distinguishedName).
 
@@ -730,7 +730,7 @@ class SDSHook:
 
         return self.query(type_query, param_query)
 
-    def remove_object(self, identity: str | DSDict, type_object: DS_TYPE_OBJECT = "object") -> None:
+    def remove_object(self, identity: str | dict | DSDict, type_object: DS_TYPE_OBJECT = "object") -> None:
         """
             Функция удаления объекта.
 
@@ -744,7 +744,7 @@ class SDSHook:
 
         return self.query(type_query, param_query)
 
-    def remove_user(self, identity: str | DSDict) -> None:
+    def remove_user(self, identity: str | dict | DSDict) -> None:
         """
             Функция удаления объекта типа пользователь.
 
@@ -757,7 +757,7 @@ class SDSHook:
 
         return self.query(type_query, param_query)
 
-    def remove_group(self, identity: str | DSDict) -> None:
+    def remove_group(self, identity: str | dict | DSDict) -> None:
         """
             Функция удаления объекта типа группа.
 
@@ -770,7 +770,7 @@ class SDSHook:
 
         return self.query(type_query, param_query)
 
-    def remove_computer(self, identity: str | DSDict) -> None:
+    def remove_computer(self, identity: str | dict | DSDict) -> None:
         """
             Функция удаления объекта типа группа.
 
@@ -783,7 +783,7 @@ class SDSHook:
 
         return self.query(type_query, param_query)
 
-    def remove_contact(self, identity: str | DSDict) -> None:
+    def remove_contact(self, identity: str | dict | DSDict) -> None:
         """
             Функция удаления объекта типа группа.
 
