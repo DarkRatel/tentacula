@@ -77,7 +77,7 @@ class DSHook:
         return False
 
     def get_object(
-            self, identity: str | DSDict = None, ldap_filter: str = None,
+            self, identity: str | dict | DSDict = None, ldap_filter: str = None,
             properties: str | list | tuple = None, search_scope: DS_TYPE_SCOPE = "subtree",
             type_object: DS_TYPE_OBJECT = "object"
     ) -> list[DSDict]:
@@ -139,7 +139,7 @@ class DSHook:
         return result
 
     def get_user(
-            self, identity: str | DSDict = None, ldap_filter: str = None,
+            self, identity: str | dict | DSDict = None, ldap_filter: str = None,
             properties: str | list | tuple = None, search_scope: DS_TYPE_SCOPE = "subtree"
     ) -> list[DSDict]:
         """
@@ -158,7 +158,7 @@ class DSHook:
                                search_scope=search_scope, type_object="user")
 
     def get_group(
-            self, identity: str | DSDict = None, ldap_filter: str = None,
+            self, identity: str | dict | DSDict = None, ldap_filter: str = None,
             properties: str | list | tuple = None, search_scope: DS_TYPE_SCOPE = "subtree"
     ) -> list[DSDict]:
         """
@@ -177,7 +177,7 @@ class DSHook:
                                search_scope=search_scope, type_object="group")
 
     def get_computer(
-            self, identity: str | DSDict = None, ldap_filter: str = None,
+            self, identity: str | dict | DSDict = None, ldap_filter: str = None,
             properties: str | list | tuple = None, search_scope: DS_TYPE_SCOPE = "subtree"
     ) -> list[DSDict]:
         """
@@ -196,7 +196,7 @@ class DSHook:
                                search_scope=search_scope, type_object="computer")
 
     def get_contact(
-            self, identity: str | DSDict = None, ldap_filter: str = None,
+            self, identity: str | dict | DSDict = None, ldap_filter: str = None,
             properties: str | list | tuple = None, search_scope: DS_TYPE_SCOPE = "subtree"
     ) -> list[DSDict]:
         """
@@ -214,7 +214,7 @@ class DSHook:
         return self.get_object(identity=identity, ldap_filter=ldap_filter, properties=properties,
                                search_scope=search_scope, type_object="contact")
 
-    def get_group_member(self, identity: str | DSDict) -> list[DSDict]:
+    def get_group_member(self, identity: str | dict | DSDict) -> list[DSDict]:
         """
         Функция получения всех членов группы, с дополнительными атрибутами.
 
@@ -225,8 +225,8 @@ class DSHook:
             Список объектов из DS
         """
 
-        if (isinstance(identity, DSDict) and identity.get('objectClass') == 'group'
-                and identity.get('distinguishedName')):
+        if (isinstance(identity, DSDict) and identity.get('objectClass') == 'group' and identity.get(
+                'distinguishedName')):
             pass
         else:
             identity = search_object(
@@ -249,7 +249,7 @@ class DSHook:
             only_one=False
         )
 
-    def set_object(self, identity: str | DSDict, remove: dict = None, add: dict[str, list] = None,
+    def set_object(self, identity: str | dict | DSDict, remove: dict = None, add: dict[str, list] = None,
                    replace: dict[str, list] = None, clear: list[str] = None, display_name: str = None,
                    description: str = None) -> None:
         """
@@ -273,7 +273,7 @@ class DSHook:
         ds_set(connect=self._connect, type_object="object", identity=identity, base=self.base, dry_run=self.dry_run,
                remove=remove, add=add, replace=replace, clear=clear, special=special, _logger=self._logger)
 
-    def set_user(self, identity: str | DSDict, remove: dict = None, add: dict[str, list] = None,
+    def set_user(self, identity: str | dict | DSDict, remove: dict = None, add: dict[str, list] = None,
                  replace: dict[str, list] = None, clear: list[str] = None, display_name: str = None,
                  description: str = None, sam_account_name: str = None, user_principal_name: str = None,
                  enabled: bool = None, password_never_expires: bool = None, account_not_delegated: bool = None,
@@ -322,7 +322,7 @@ class DSHook:
         ds_set(connect=self._connect, type_object="user", identity=identity, base=self.base, dry_run=self.dry_run,
                remove=remove, add=add, replace=replace, clear=clear, special=special, _logger=self._logger)
 
-    def set_group(self, identity: str | DSDict, remove: dict = None, add: dict[str, list] = None,
+    def set_group(self, identity: str | dict | DSDict, remove: dict = None, add: dict[str, list] = None,
                   replace: dict[str, list] = None, clear: list[str] = None, display_name: str = None,
                   description: str = None, sam_account_name: str = None,
                   group_scope: DS_GROUP_SCOPE = None, group_category: DS_GROUP_CATEGORY = None) -> None:
@@ -357,7 +357,7 @@ class DSHook:
         ds_set(connect=self._connect, type_object="group", identity=identity, base=self.base, dry_run=self.dry_run,
                remove=remove, add=add, replace=replace, clear=clear, special=special, _logger=self._logger)
 
-    def set_computer(self, identity: str | DSDict, remove: dict = None, add: dict[str, list] = None,
+    def set_computer(self, identity: str | dict | DSDict, remove: dict = None, add: dict[str, list] = None,
                      replace: dict[str, list] = None, clear: list[str] = None, display_name: str = None,
                      description: str = None) -> None:
         """
@@ -381,7 +381,7 @@ class DSHook:
         ds_set(connect=self._connect, type_object="computer", identity=identity, base=self.base, dry_run=self.dry_run,
                remove=remove, add=add, replace=replace, clear=clear, special=special, _logger=self._logger)
 
-    def set_contact(self, identity: str | DSDict, remove: dict = None, add: dict[str, list] = None,
+    def set_contact(self, identity: str | dict | DSDict, remove: dict = None, add: dict[str, list] = None,
                     replace: dict[str, list] = None, clear: list[str] = None, display_name: str = None,
                     description: str = None) -> None:
         """
@@ -405,7 +405,7 @@ class DSHook:
         ds_set(connect=self._connect, dry_run=self.dry_run, type_object="contact", identity=identity, base=self.base,
                remove=remove, add=add, replace=replace, clear=clear, special=special, _logger=self._logger)
 
-    def set_account_password(self, identity: str | DSDict, account_password: str) -> None:
+    def set_account_password(self, identity: str | dict | DSDict, account_password: str) -> None:
         """
         Функция изменения пароля пользователя в DS. Принудительно снимает флаг "PASSWD_NOTREQD"
 
@@ -418,7 +418,7 @@ class DSHook:
                replace={'unicodePwd': [account_password]},
                special=DSDict({'userAccountControl': DSDict({'PasswordNotRequired': False})}), _logger=self._logger)
 
-    def set_account_unlock(self, identity: str | DSDict) -> None:
+    def set_account_unlock(self, identity: str | dict | DSDict) -> None:
         """
         Функция снятия временной блокировки пользователя в DS (distinguishedName, objectGUID, objectSid, sAMAccountName или словарь объекта DS (DSDict)).
 
@@ -429,8 +429,8 @@ class DSHook:
         ds_set(connect=self._connect, type_object="user", identity=identity, base=self.base, dry_run=self.dry_run,
                replace={'lockoutTime': ["0"]}, _logger=self._logger)
 
-    def add_group_member(self, identity: str | DSDict,
-                         members: str | DSDict | list[str] | tuple[str] | list[DSDict]) -> None:
+    def add_group_member(self, identity: str | dict | DSDict,
+                         members: str | dict | DSDict | list[str] | tuple[str] | list[DSDict]) -> None:
         """
         Функция добавления объектов в группу. Члены добавляются последовательно (один член, один запрос)
 
@@ -441,8 +441,8 @@ class DSHook:
         ds_set_member(connect=self._connect, _logger=self._logger, dry_run=self.dry_run,
                       identity=identity, base=self.base, members=members, action='add')
 
-    def remove_group_member(self, identity: str | DSDict,
-                            members: str | DSDict | list[str] | tuple[str] | list[DSDict]) -> None:
+    def remove_group_member(self, identity: str | dict | DSDict,
+                            members: str | dict | DSDict | list[str] | tuple[str] | list[DSDict]) -> None:
         """
         Функция добавления объектов в группу. Члены удаляются последовательно (один член, один запрос)
 
@@ -453,7 +453,7 @@ class DSHook:
         ds_set_member(connect=self._connect, _logger=self._logger, dry_run=self.dry_run,
                       identity=identity, base=self.base, members=members, action='remove')
 
-    def move_object(self, identity: str | DSDict, target_path: str) -> None:
+    def move_object(self, identity: str | dict | DSDict, target_path: str) -> None:
         """
         Функция перемещения объектов между Организационными юнитами (изменяется distinguishedName).
 
@@ -479,7 +479,7 @@ class DSHook:
         else:
             self._logger.warning("Enabled dry run")
 
-    def rename_object(self, identity: str | DSDict, new_name: str) -> None:
+    def rename_object(self, identity: str | dict | DSDict, new_name: str) -> None:
         """
         Функция переименования объекта (изменяются атрибуты cn, name и distinguishedName).
 
@@ -591,7 +591,7 @@ class DSHook:
         ds_new(connect=self._connect, dry_run=self.dry_run, type_object='contact', path=path, name=name,
                display_name=display_name, extend=None, other_attributes=other_attributes, _logger=self._logger)
 
-    def remove_object(self, identity: str | DSDict, type_object: DS_TYPE_OBJECT = "object") -> None:
+    def remove_object(self, identity: str | dict | DSDict, type_object: DS_TYPE_OBJECT = "object") -> None:
         """
             Функция удаления объекта.
 
@@ -617,7 +617,7 @@ class DSHook:
         else:
             self._logger.warning("Enabled dry run")
 
-    def remove_user(self, identity: str | DSDict) -> None:
+    def remove_user(self, identity: str | dict | DSDict) -> None:
         """
             Функция удаления объекта типа пользователь.
 
@@ -626,7 +626,7 @@ class DSHook:
         """
         self.remove_object(identity=identity, type_object="user")
 
-    def remove_group(self, identity: str | DSDict) -> None:
+    def remove_group(self, identity: str | dict | DSDict) -> None:
         """
             Функция удаления объекта типа группа.
 
@@ -635,7 +635,7 @@ class DSHook:
         """
         self.remove_object(identity=identity, type_object="group")
 
-    def remove_computer(self, identity: str | DSDict) -> None:
+    def remove_computer(self, identity: str | dict | DSDict) -> None:
         """
             Функция удаления объекта типа группа.
 
@@ -644,7 +644,7 @@ class DSHook:
         """
         self.remove_object(identity=identity, type_object="computer")
 
-    def remove_contact(self, identity: str | DSDict) -> None:
+    def remove_contact(self, identity: str | dict | DSDict) -> None:
         """
             Функция удаления объекта типа группа.
 
