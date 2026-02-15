@@ -57,17 +57,8 @@ class DSHook:
         # Создание уникального имени для логов
         self._logger = logging.getLogger(self.__class__.__name__)
 
-        # Добавляется хендлер только если его нет
-        if not self._logger.handlers:
-            handler = logging.StreamHandler()
-            formatter = logging.Formatter("[%(asctime)s] [%(levelname)s|%(name)s] %(message)s")
-            handler.setFormatter(formatter)
-            self._logger.addHandler(handler)
-            self._logger.propagate = False
-
-        self._logger.setLevel(log_level)  # Указание уровня логирования
-
-        self._logger.debug(f"Создание экземпляра логгера {self.__class__.__name__}")
+        if log_level:
+            self._logger.setLevel(log_level)
 
     def __enter__(self):
         """Автоматическое открытие сессии"""
