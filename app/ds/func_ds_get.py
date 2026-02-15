@@ -203,9 +203,9 @@ def search_object(connect, _logger, ldap_filter, search_base, properties, type_o
 
 def gen_filter_to_id(identity: str | DSDict, type_object: DS_TYPE_OBJECT_SYSTEM = "object",
                      return_dict: bool = False) -> str | DSDict:
-    search_line: str
-
-    if isinstance(identity, str):
+    if isinstance(identity, dict):
+        identity = DSDict(identity)
+    elif isinstance(identity, str):
         if re.search(r'^cn=|^ou=|^dc=', identity.lower()):
             identity = DSDict({"distinguishedName": identity})
         # Если передан GUID, формируется LDAP-фильтр для поиска объекта
@@ -222,6 +222,8 @@ def gen_filter_to_id(identity: str | DSDict, type_object: DS_TYPE_OBJECT_SYSTEM 
 
     if return_dict:
         return identity
+
+    search_line: str
 
     if 'sAMAccountName' in identity and type_object in ["user", "computer", "group", "member"]:
         search_line = f"(sAMAccountName={identity['sAMAccountName']})"
