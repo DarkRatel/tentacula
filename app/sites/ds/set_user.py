@@ -1,10 +1,9 @@
-from typing import Type
 from datetime import datetime
 from pydantic import BaseModel
 
 from app.moduls.post_base import create_post
 from . import router_ds
-from app.ds import DSDict, DSHook
+from app.ds import DSHook
 
 
 class SpecData(BaseModel):
@@ -13,7 +12,7 @@ class SpecData(BaseModel):
     host: str
     base: str = None
 
-    identity: str | Type[DSDict]
+    identity: str | dict
     remove: dict = None
     add: dict[str, list] = None
     replace: dict[str, list] = None
@@ -28,7 +27,7 @@ class SpecData(BaseModel):
     account_expiration_date: bool | datetime = None
 
 
-async def set_user(login: str, password: str, host: str, identity: str | DSDict, base: str = None,
+async def set_user(login: str, password: str, host: str, identity: str | dict, base: str = None,
                    remove: dict = None, add: dict[str, list] = None,
                    replace: dict[str, list] = None, clear: list[str] = None, display_name: str = None,
                    sam_account_name: str = None, user_principal_name: str = None, enabled: bool = None,

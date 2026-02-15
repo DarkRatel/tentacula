@@ -1,9 +1,8 @@
-from typing import Type
 from pydantic import BaseModel
 
 from app.moduls.post_base import create_post
 from . import router_ds
-from app.ds import DSDict, DSHook
+from app.ds import DSHook
 
 
 class SpecData(BaseModel):
@@ -12,10 +11,10 @@ class SpecData(BaseModel):
     host: str
     base: str = None
 
-    identity: str | Type[DSDict]
+    identity: str | dict
 
 
-async def set_account_unlock(login: str, password: str, host: str, identity: str | DSDict, base: str = None):
+async def set_account_unlock(login: str, password: str, host: str, identity: str | dict, base: str = None):
     with DSHook(login=login, password=password, host=host, port=636, base=base) as ds:
         ds.set_account_unlock(
             identity=identity

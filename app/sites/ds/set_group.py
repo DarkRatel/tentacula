@@ -1,10 +1,8 @@
-from typing import Type
-from datetime import datetime
 from pydantic import BaseModel
 
 from app.moduls.post_base import create_post
 from . import router_ds
-from app.ds import DSDict, DSHook, DS_GROUP_SCOPE, DS_GROUP_CATEGORY
+from app.ds import DSHook, DS_GROUP_SCOPE, DS_GROUP_CATEGORY
 
 
 class SpecData(BaseModel):
@@ -13,7 +11,7 @@ class SpecData(BaseModel):
     host: str
     base: str = None
 
-    identity: str | Type[DSDict]
+    identity: str | dict
     remove: dict = None
     add: dict[str, list] = None
     replace: dict[str, list] = None
@@ -23,7 +21,7 @@ class SpecData(BaseModel):
     group_category: DS_GROUP_CATEGORY = None
 
 
-async def set_group(login: str, password: str, host: str, identity: str | DSDict, base: str = None,
+async def set_group(login: str, password: str, host: str, identity: str | dict, base: str = None,
                     remove: dict = None, add: dict[str, list] = None, replace: dict[str, list] = None,
                     clear: list[str] = None, display_name: str = None,
                     group_scope: DS_GROUP_SCOPE = None, group_category: DS_GROUP_CATEGORY = None):

@@ -1,10 +1,8 @@
-from typing import Type
-
 from pydantic import BaseModel
 
 from app.moduls.post_base import create_post
 from . import router_ds
-from app.ds import DSDict, DSHook, DS_TYPE_SCOPE
+from app.ds import DSHook, DS_TYPE_SCOPE
 
 
 class SpecData(BaseModel):
@@ -13,13 +11,13 @@ class SpecData(BaseModel):
     host: str
     base: str = None
 
-    identity: str | Type[DSDict] = None
+    identity: str | dict = None
     ldap_filter: str = None
     properties: str | list | tuple = None
     search_scope: DS_TYPE_SCOPE = "subtree"
 
 
-async def get_contact(login: str, password: str, host: str, base: str = None, identity: str | DSDict = None,
+async def get_contact(login: str, password: str, host: str, base: str = None, identity: str | dict = None,
                       ldap_filter: str = None, properties: str | list | tuple = None,
                       search_scope: DS_TYPE_SCOPE = "subtree") -> list[DSDict]:
     with DSHook(login=login, password=password, host=host, port=636, base=base) as ds:
