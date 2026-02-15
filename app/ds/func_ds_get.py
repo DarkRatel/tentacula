@@ -100,8 +100,14 @@ pattern = re.compile(r'\(([A-Za-z0-9]*)([><~]?=)((?:\([^=]*\)|\),|[^)])+)\)(?=$|
 
 def repl(m):
     """Функция для изоляции значений в строке поиска"""
+    key = m.group(1)
     value = m.group(3)
-    return f"({m.group(1)}{m.group(2)}{ldap.filter.escape_filter_chars(value)})".replace(r"\2a", "*")
+
+    if key.lower() == 'objectguid':
+        value = c_guid_to_binary(value)
+    else:
+        value = ldap.filter.escape_filter_chars(value).replace(r"\2a", "*")
+    return f"({key}{m.group(2)}{value})"
 
 
 def search_object(connect, _logger, ldap_filter, search_base, properties, type_object,
