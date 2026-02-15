@@ -112,7 +112,7 @@ def search_object(connect, _logger, ldap_filter, search_base, properties, type_o
     ldap_filter = DataDSLDAP[type_object.upper()].unit(ldap_filter)
 
     if only_one and '*' in ldap_filter:
-        raise RuntimeError("При точеном поиске недопустим параметр разрешающий нестрогий поиск (*)")
+        raise RuntimeError(f"При точеном поиске недопустим параметр разрешающий нестрогий поиск (*): {ldap_filter}")
 
     if not properties:
         properties = []
