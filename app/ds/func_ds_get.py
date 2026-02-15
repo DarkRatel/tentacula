@@ -283,3 +283,19 @@ def c_bool_string_to_bool(data: str):
         return None
     else:
         raise RuntimeError(f"Ошибка определения болевого значения: {data}")
+
+
+def c_guid_to_binary(data: str) -> str:
+    """
+    Конвертация GUID в байты
+    :param data: обработанный GUID (XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX)
+    :return: байтовая последовательность GUID'а
+    """
+    guid_replace = data.replace("-", "")
+    new_order = [6, 7, 4, 5, 2, 3, 0, 1, 10, 11, 8, 9, 14, 15, 12, 13]  # the weird-ordered stuff
+    for i in range(16, len(guid_replace)):
+        new_order.append(i)  # slam the rest on
+    guid_string_in_search_order = str.join('', [guid_replace[i] for i in new_order])
+    identity_convert = ''.join(['\\%s' % str.join('', guid_string_in_search_order[i:i + 2]) for i in
+                                range(0, len(guid_string_in_search_order), 2)])
+    return identity_convert
