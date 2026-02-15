@@ -48,11 +48,11 @@ def ds_set_member(connect, _logger, dry_run: bool, base: str,
     group_domain = identity['distinguishedName'].lower()[identity['distinguishedName'].lower().find('dc='):]
 
     # Если член группы передан как строка, он конвертируется в массив
-    if isinstance(members, str):
+    if isinstance(members, str | dict | DSDict):
         members = [members]
+    members = [DSDict(member) if isinstance(member, dict) else member for member in members]
 
-
-    members_id = [] # Массив для ID членов
+    members_id = []  # Массив для ID членов
     # Перебор массива членов для вычленения ID
     for member in members:
         # Если член это строка, то строка анализируется и возвращается в виде словаря, для корректной обработки
