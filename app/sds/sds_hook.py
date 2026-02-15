@@ -5,6 +5,8 @@ import time
 import base64
 from datetime import datetime
 
+import httpx, ssl
+import psycopg2
 from cryptography import x509
 from cryptography.x509.oid import NameOID
 from cryptography.hazmat.backends import default_backend
@@ -12,10 +14,6 @@ from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives import serialization
-
-import httpx, ssl
-import psycopg2
-from pydantic_core import ErrorDetails
 
 from app.ds import DSHook, DSDict
 from app.ds import DS_TYPE_SCOPE, DS_TYPE_OBJECT, DS_GROUP_SCOPE, DS_GROUP_CATEGORY
@@ -134,32 +132,32 @@ class SDSHook:
             from airflow.hooks.base_hook import BaseHook
             _config = BaseHook.get_connection(airflow_conn_id)
 
-            login = _config.login
-            password = _config.password
-            host = _config.host
-            port = _config.port
-            base = _config.schema
+            login = login or _config.login
+            password = password or _config.password
+            host = host or _config.host
+            port = port or _config.port
+            base = base or _config.schema
 
             if _config.get_extra():
                 _data = json.loads(_config.get_extra())
-                url = _data.get("url", None)
-                public_key = _data.get("public_key", None)
+                url = url or _data.get("url", None)
+                public_key = public_key or _data.get("public_key", None)
 
-                cert_root = _data.get("cert_root", None)
-                cert_file = _data.get("cert_file", None)
-                cert_key = _data.get("cert_key", None)
-                dry_run = _data.get("dry_run", None)
-                log_level = _data.get("log_level", logging.INFO)
-                timeout = _data.get("timeout", None)
+                cert_root = cert_root or _data.get("cert_root", None)
+                cert_file = cert_file or _data.get("cert_file", None)
+                cert_key = cert_key or _data.get("cert_key", None)
+                dry_run = dry_run or _data.get("dry_run", False)
+                log_level = log_level or _data.get("log_level", logging.INFO)
+                timeout = timeout or _data.get("timeout", None)
 
                 db_conn_id = _data.get("db_conn_id", None)
                 if db_conn_id:
                     _config = BaseHook.get_connection(db_conn_id)
-                    db_login = _config.login
-                    db_password = _config.password
-                    db_host = _config.host
-                    db_port = _config.port
-                    database = _config.schema
+                    db_login = db_login or _config.login
+                    db_password = db_password or _config.password
+                    db_host = db_host or _config.host
+                    db_port = db_port or _config.port
+                    database = database or _config.schema
 
         self._login = login
         self._password = password
@@ -267,7 +265,7 @@ class SDSHook:
         if self._type_conn == self.CONN_DS:
             return getattr(self._connect_ds, type_query)(**param_query)
         if self._type_conn == self.CONN_TENT:
-            url = f'{self._url}/ds/{type_query}'
+            url = f'{self._url}/{type_query}'
 
             with open(self._cert_file, "rb") as f:
                 cert_data = f.read()
@@ -276,8 +274,10 @@ class SDSHook:
             cn = cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
 
             self._logger.info(f"Run URL Connect: {url}"
-                              f", Client cert Subject: 'CN={cn}'"
-                              f", Client cert Serial: {cert.serial_number}")
+                              f", LDAP Host: {self._host}:{self._port}, Login: {self._login}"
+                              f", Client cert Subject: 'CN={cn}', Client cert Serial: {cert.serial_number}")
+
+            self._logger.info(f"Endpoint: {type_query}, Params: {param_query}, Base: {self._base}")
 
             response = self._connect_tent.post(url, json={**self._param_conn, **param_query})
             try:
@@ -289,7 +289,7 @@ class SDSHook:
                 print(response.text)
                 raise e
 
-            return [DSDict(v) for v in datetime_parser(result)['details']]
+            return [DSDict(datetime_parser(v)) for v in result['details']] if result['details'] else None
         if self._type_conn == self.CONN_DB:
             return datetime_parser(
                 request_db(
