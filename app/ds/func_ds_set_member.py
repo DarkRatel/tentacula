@@ -6,7 +6,21 @@ from .func_ds_get import search_object, gen_filter_to_id
 
 
 def ds_set_member(connect, _logger, dry_run: bool, base: str,
-                  identity, members, action: DS_ACTION_MEMBER = None) -> None:
+                  identity: str | DSDict, members: str | list, action: DS_ACTION_MEMBER = None) -> None:
+    """
+    Изменение членства в группе.
+
+    Args:
+        connect: Открытое подключение к DS
+        _logger: Получение логгера для вывода логов
+        dry_run: Исполнение запроса без отправки команды на изменения
+        base: Область работы
+        identity: Группа для изменения
+        members: Члены связанные с группой для изменения
+        action: Тип действия (add - добавить в группу, remove - удалить из группы)
+    """
+
+    # Определение типа группы
     if action == 'add':
         func = add_member
     elif action == 'remove':
@@ -14,47 +28,60 @@ def ds_set_member(connect, _logger, dry_run: bool, base: str,
     else:
         raise TypeError(f"Некорректный типа действия: {action}")
 
+    ### Обработка Группы
+    # Если передан объект типа группа и есть distinguishedName, переходим к следующему шагу
     if isinstance(identity, DSDict) and identity.get('objectClass') == 'group' and identity.get('distinguishedName'):
         pass
+    # Иначе производится попытка найти объект типа группа
     else:
         identity = search_object(
             connect=connect,
             _logger=_logger,
             ldap_filter=gen_filter_to_id(identity, type_object='group'),
             search_base=base,
-            properties=['distinguishedName'], # ['distinguishedName', 'member'] if action == 'remove' else ['distinguishedName'],
+            properties=['distinguishedName'],
             type_object='group',
             only_one=True,
         )[0]
 
-    # DN домена группы
-    group_domain = base.lower()[base.lower().find('dc='):]
+    # Из distinguishedName вычленяется часть c DC
+    group_domain = identity['distinguishedName'].lower()[identity['distinguishedName'].lower().find('dc='):]
 
+    # Если член группы передан как строка, он конвертируется в массив
     if isinstance(members, str):
         members = [members]
 
-    members_id = []
+
+    members_id = [] # Массив для ID членов
+    # Перебор массива членов для вычленения ID
     for member in members:
+        # Если член это строка, то строка анализируется и возвращается в виде словаря, для корректной обработки
         if isinstance(member, str):
             member = gen_filter_to_id(member, type_object='member', return_dict=True)
 
-        # Если distinguishedName есть, то совпадает ли домен члена с доменом группы
+        # Если distinguishedName есть и домен группы не совпадает с доменом члена
+        # будет попытка управлять членом как ForeignSecurityPrincipals
         if member.get('distinguishedName') and group_domain.lower() not in member['distinguishedName'].lower():
-            if member.get('objectSid') and member.get('objectClass'):
+
+            # Если член имеем objectSid и является пользователем
+            if member.get('objectSid') and member.get('objectClass') == 'user':
+                # Добавления ID члена в виде ForeignSecurityPrincipals
                 members_id.append(f"CN={member['objectSid']},CN=ForeignSecurityPrincipals,{group_domain}")
             else:
                 raise TypeError(f"Для кроссдоменного управления членством {member} требуется получить "
-                                f"словарь объекта с минимальным набором атрибутов: "
+                                f"словарь пользователя с минимальным набором атрибутов: "
                                 f"distinguishedName, objectSid, objectClass")
-        # Если передан хотя бы distinguishedName
+
+        # Если в данных члена есть distinguishedName, он выберается как ID
         elif member.get('distinguishedName'):
             members_id.append(member['distinguishedName'])
-        # В остальных случах будет попытка найти объект в DS
+
+        # Иначе производится попытка поиска члена в DS
         else:
             s_object = search_object(
                 connect=connect,
                 _logger=_logger,
-                ldap_filter=gen_filter_to_id(member, type_object='group'),
+                ldap_filter=gen_filter_to_id(member, type_object='member'),
                 search_base=base,
                 properties=['distinguishedName', 'objectClass'],
                 type_object='member',
@@ -64,6 +91,7 @@ def ds_set_member(connect, _logger, dry_run: bool, base: str,
 
     _logger.debug(f"{action.capitalize()} member: DN: {identity['distinguishedName']}, members: {members_id}")
 
+    # Перебор ID членов для внесения правок по каждому
     for m_id in members_id:
         func(connect=connect, _logger=_logger, group=identity['distinguishedName'], member=m_id, dry_run=dry_run,
              current_members=identity.get('member', None))
