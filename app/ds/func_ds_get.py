@@ -228,7 +228,7 @@ def gen_filter_to_id(identity: str | DSDict, type_object: DS_TYPE_OBJECT_SYSTEM 
     elif 'distinguishedName' in identity:
         search_line = f"(distinguishedName={identity['distinguishedName']})"
     elif 'ObjectGUID' in identity:
-        search_line = f"(ObjectGUID={identity['distinguishedName']})"
+        search_line = f"(ObjectGUID={identity['ObjectGUID']})"
     elif 'objectSid' in identity:
         search_line = f"(objectSid={identity['objectSid']})"
     else:
