@@ -34,6 +34,20 @@ def datetime_parser(dct):
                 pass
     return dct
 
+def datetime_to_iso(dct):
+    for k, v in dct.items():
+        if isinstance(v, list):
+            if isinstance(v, datetime):
+                try:
+                    dct[k] = datetime.isoformat(v)
+                except ValueError:
+                    pass
+        if isinstance(v, datetime):
+            try:
+                dct[k] = datetime.isoformat(v)
+            except ValueError:
+                pass
+    return dct
 
 def encode_param(_public_key, param: dict):
     param = json.dumps(param).encode("utf-8")
