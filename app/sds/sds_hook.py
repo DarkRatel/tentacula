@@ -108,7 +108,7 @@ class SDSHook:
     CONN_DB = 3
 
     def __init__(self, login: str = None, password: str = None, host: str = None, port: int = 636, base: str = None,
-                 dry_run: bool = False, log_level: int = logging.INFO,
+                 dry_run: bool = False, log_level: int = None,
                  public_key: str = None, timeout: int = 300,
                  db_login: str = None, db_password: str = None, db_host: str = None, db_port: int = 5432,
                  database: str = None,
@@ -181,13 +181,8 @@ class SDSHook:
         # Создание уникального имени для логов
         self._logger = logging.getLogger(self.__class__.__name__)
 
-        # Добавляется хендлер только если его нет
-        if not self._logger.handlers:
-            handler = logging.StreamHandler()
-            formatter = logging.Formatter("[%(asctime)s] [%(levelname)s|%(name)s] %(message)s")
-            handler.setFormatter(formatter)
-            self._logger.addHandler(handler)
-            self._logger.propagate = False
+        if log_level:
+            self._logger.setLevel(log_level)
 
         self._logger.setLevel(log_level)  # Указание уровня логирования
         self._logger.debug(f"Создание экземпляра логгера {self.__class__.__name__}")
@@ -197,17 +192,6 @@ class SDSHook:
                              'base': self._base, 'dry_run': self._dry_run, 'log_level': self._log_level}.items() if v}
 
         self._type_conn = None
-
-        # Создание уникального имени для логов
-        self._logger = logging.getLogger(self.__class__.__name__)
-
-        # Добавляется хендлер только если его нет
-        if not self._logger.handlers:
-            handler = logging.StreamHandler()
-            formatter = logging.Formatter("[%(asctime)s] [%(levelname)s|%(name)s] %(message)s")
-            handler.setFormatter(formatter)
-            self._logger.addHandler(handler)
-            self._logger.propagate = False
 
         ### Выбор способа подключения
         # Если атрибуты, подходят для эндпоинтов Tentacula
