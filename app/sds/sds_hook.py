@@ -198,9 +198,6 @@ class SDSHook:
         if log_level:
             self._logger.setLevel(log_level)
 
-        self._logger.setLevel(log_level)  # Указание уровня логирования
-        self._logger.debug(f"Создание экземпляра логгера {self.__class__.__name__}")
-
         self._param_conn = {k: v for k, v in
                             {'login': self._login, 'password': self._password, 'host': self._host, 'port': self._port,
                              'base': self._base, 'dry_run': self._dry_run, 'log_level': self._log_level}.items() if v}
