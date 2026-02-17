@@ -13,6 +13,11 @@ from .func_ds_new import ds_new
 from .func_ds_set import ds_set
 from .func_ds_set_member import ds_set_member
 
+prefix_ldap = {
+    636: 'ldaps',
+    389: 'ldap'
+}
+
 
 class DSHook:
     def __init__(self, login: str, password: str, host: str | list, port: int = 636, base: str = None,
@@ -40,6 +45,8 @@ class DSHook:
 
         self._host = host.split(',') if isinstance(host, str) else host
         self._port = port
+        if not prefix_ldap.get(port):
+            raise ValueError("Only 636 or 389 ports are allowed")
 
         # Создание уникального имени для логов
         self._logger = logging.getLogger(self.__class__.__name__)
@@ -50,18 +57,11 @@ class DSHook:
     def __enter__(self):
         """Автоматическое открытие сессии"""
 
-        if self._port == 636:
-            prefix = 'ldaps'
-        elif self._port == 389:
-            prefix = 'ldap'
-        else:
-            raise RuntimeError(f"Only 636 or 389 ports are allowed")
-
         connect_line = None
 
         for host in self._host:
             try:
-                connect_line = f"{prefix}://{host}:{self._port}"
+                connect_line = f"{prefix_ldap[self._port]}://{host}:{self._port}"
 
                 ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_ALLOW)
                 self._connect = ldap.initialize(connect_line)
