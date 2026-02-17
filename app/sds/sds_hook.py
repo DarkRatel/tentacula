@@ -272,7 +272,16 @@ class SDSHook:
                               f", LDAP Host: {self._host}:{self._port}, Login: {self._login}"
                               f", Client cert Subject: 'CN={cn}', Client cert Serial: {cert.serial_number}")
 
-            self._logger.info(f"Endpoint: {type_query}, Params: {param_query}, Base: {self._base}")
+            for_send = {}
+            for k, v in param_query.items():
+                if isinstance(v, str) and 'password' in k.lower():
+                    for_send.update({k: '***'})
+                elif isinstance(v, dict):
+                    for_send.update({k: datetime_to_iso(v)})
+                else:
+                    for_send.update({k: v})
+
+            self._logger.info(f"Endpoint: {type_query}, Params: {for_send}, Base: {self._base}")
 
             response = self._connect_tent.post(url, json={**self._param_conn, **param_query})
             try:
