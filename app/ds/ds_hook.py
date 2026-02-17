@@ -73,8 +73,15 @@ class DSHook:
 
                 self._logger.info(f"Run LDAP Connect: {connect_line}, login: {self._login}")
 
-        # Открытие сессии с DS
-        self._connect.simple_bind_s(self._login, self._password)
+                # Открытие сессии с DS
+                self._connect.simple_bind_s(self._login, self._password)
+
+                break
+            except ldap.SERVER_DOWN as e:
+                self._logger.warning(f"Host {connect_line}: {e}")
+
+        else:
+            raise TimeoutError(f"Can't contact LDAP servers")
 
         # Если область каталога не определена, производится запрос для установки области работы
         self.base = self.base if self.base else search_root_dse(connect=self._connect, _logger=self._logger)
