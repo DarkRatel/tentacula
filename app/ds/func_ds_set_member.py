@@ -1,6 +1,6 @@
 import ldap
 
-from .data import DS_ACTION_MEMBER, DataDSProperties
+from .data import DS_ACTION_MEMBER
 from .ds_dict import DSDict
 from .func_ds_get import search_object, gen_filter_to_id
 
