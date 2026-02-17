@@ -37,7 +37,10 @@ def gen_change_pwd_at_logon(change_password_at_logon: bool):
     return '0' if change_password_at_logon else '-1'
 
 
-def gen_account_exp_date(account_expiration_date: bool | datetime = None):
+def gen_account_exp_date(account_expiration_date: bool | datetime | str = None):
+    if isinstance(account_expiration_date, str):
+        account_expiration_date = datetime.fromisoformat(account_expiration_date)
+
     if isinstance(account_expiration_date, datetime):
         value = str(
             int(

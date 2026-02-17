@@ -293,7 +293,7 @@ class DSHook:
                  replace: dict[str, list] = None, clear: list[str] = None, display_name: str = None,
                  description: str = None, sam_account_name: str = None, user_principal_name: str = None,
                  enabled: bool = None, password_never_expires: bool = None, account_not_delegated: bool = None,
-                 change_password_at_logon: bool = None, account_expiration_date: bool | datetime = None) -> None:
+                 change_password_at_logon: bool = None, account_expiration_date: bool | datetime | str = None) -> None:
         """
         Функция изменения атрибутов пользователя в DS.
 
@@ -525,7 +525,8 @@ class DSHook:
     def new_user(self, path: str, name: str, sam_account_name: str, account_password: str, display_name: str = None,
                  user_principal_name: str = None, enabled: bool = None, password_never_expires: bool = None,
                  account_not_delegated: bool = None, change_password_at_logon: bool = None,
-                 account_expiration_date: bool | datetime = None, other_attributes: dict[str, list] = None) -> None:
+                 account_expiration_date: bool | datetime | str = None,
+                 other_attributes: dict[str, list] = None) -> None:
         """
             Функция создания объекта типа пользователь.
 
