@@ -83,13 +83,13 @@ def ds_set(connect, _logger, type_object, identity, base, dry_run: bool,
     for key in special_attr:
         if key in result:
             handler = ATTR_PROCESSING.get(key, ATTR_PROCESSING['_default_'])
-            result[key] = [handler(result[key], special[key])]
+            value = [handler(result[key], special[key])]
             action = ldap.MOD_REPLACE
         else:
-            result = special[key]
+            value = special[key]
             action = ldap.MOD_ADD
 
-        list_object.append((action, key, result[key] if isinstance(result[key], list) else [result[key]]))
+        list_object.append((action, key, value if isinstance(value, list) else [value]))
 
     if not list_object:
         raise RuntimeError("Нет данных для изменения")
