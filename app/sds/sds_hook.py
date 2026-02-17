@@ -293,7 +293,10 @@ class SDSHook:
                 print(response.text)
                 raise e
 
-            return [DSDict(datetime_parser(v)) for v in result['details']] if result['details'] else None
+            if isinstance(result['details'], list):
+                return [DSDict(datetime_parser(v)) if isinstance(v, dict) else v for v in result['details']]
+            else:
+                return result['details']
         if self._type_conn == self.CONN_DB:
             return datetime_parser(
                 request_db(
