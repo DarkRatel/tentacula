@@ -15,8 +15,8 @@ from .func_ds_set_member import ds_set_member
 
 
 class DSHook:
-    def __init__(self, login: str, password: str, host: str, port: int = 636, base: str = None,
-                 dry_run: bool = False, log_level: int = logging.INFO) -> None:
+    def __init__(self, login: str, password: str, host: str | list, port: int = 636, base: str = None,
+                 dry_run: bool = False, log_level: int = None) -> None:
         """
         Класс создаёт сессию с DS, в рамках который будет исполнен запрос к каталогу
         (запрос описывается в рамках наследованных функций).
@@ -24,11 +24,12 @@ class DSHook:
         Args:
             login: Логин учётной записи, от имени который создаётся сессия в DS
             password: Пароль от учётной записи
-            host: Адрес контроллера домена
+            host: Адрес контроллера домена (если в строке будут указаны хосты через запятую или передан список хостов,
+            хук будет последовательно подключается к следующему, если предыдущий будет недоступен)
             port: Порт подключения: 389 или 636 (по умолчанию 636)
             base: Область каталога. Если не указать, при открытии сессии у DS будет запрошена область работы
             dry_run: Формирование запроса, без внесения изменений в DS
-            log_level: Тип логирования (принимает значения от logging)
+            log_level: Переопределение глубины логирования
         """
 
         self.dry_run = dry_run
@@ -37,22 +38,8 @@ class DSHook:
         self._password = password
         self.base = base
 
-        if port == 636:
-            prefix = 'ldaps'
-        elif port == 389:
-            prefix = 'ldap'
-        else:
-            raise RuntimeError(f"Only 636 or 389 ports are allowed")
-
-        self.connect_line = f"{prefix}://{host}:{port}"
-
-        ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_ALLOW)
-        self._connect = ldap.initialize(self.connect_line)
-
-        self._connect.set_option(ldap.OPT_REFERRALS, 0)
-        self._connect.set_option(ldap.OPT_PROTOCOL_VERSION, 3)
-        self._connect.set_option(ldap.OPT_DEBUG_LEVEL, 255)
-        self._connect.set_option(ldap.OPT_X_TLS_NEWCTX, 0)
+        self._host = host.split(',') if isinstance(host, str) else host
+        self._port = port
 
         # Создание уникального имени для логов
         self._logger = logging.getLogger(self.__class__.__name__)
@@ -62,7 +49,29 @@ class DSHook:
 
     def __enter__(self):
         """Автоматическое открытие сессии"""
-        self._logger.info(f"Run LDAP Connect: {self.connect_line}, login: {self._login}")
+
+        if self._port == 636:
+            prefix = 'ldaps'
+        elif self._port == 389:
+            prefix = 'ldap'
+        else:
+            raise RuntimeError(f"Only 636 or 389 ports are allowed")
+
+        connect_line = None
+
+        for host in self._host:
+            try:
+                connect_line = f"{prefix}://{host}:{self._port}"
+
+                ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_ALLOW)
+                self._connect = ldap.initialize(connect_line)
+
+                self._connect.set_option(ldap.OPT_REFERRALS, 0)
+                self._connect.set_option(ldap.OPT_PROTOCOL_VERSION, 3)
+                self._connect.set_option(ldap.OPT_DEBUG_LEVEL, 255)
+                self._connect.set_option(ldap.OPT_X_TLS_NEWCTX, 0)
+
+                self._logger.info(f"Run LDAP Connect: {connect_line}, login: {self._login}")
 
         # Открытие сессии с DS
         self._connect.simple_bind_s(self._login, self._password)
