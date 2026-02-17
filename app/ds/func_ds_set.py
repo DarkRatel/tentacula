@@ -62,12 +62,13 @@ def ds_set(connect, _logger, type_object, identity, base, dry_run: bool,
             list_object.append((ldap.MOD_DELETE, key, None))
 
     special_attr = []
-    for key, value in special.items():
-        for (_, k, _) in list_object:
-            if k.lower() == key.lower():
-                raise RuntimeError(f"Недопустимо менять атрибут {key} как настраиваемый и дополнительный")
-        if value is not None:
-            special_attr += [key]
+    if special:
+        for key, value in special.items():
+            for (_, k, _) in list_object:
+                if k.lower() == key.lower():
+                    raise RuntimeError(f"Недопустимо менять атрибут {key} как настраиваемый и дополнительный")
+            if value is not None:
+                special_attr += [key]
 
     result = search_object(
         connect=connect,
