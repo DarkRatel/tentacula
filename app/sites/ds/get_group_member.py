@@ -2,7 +2,7 @@ from pydantic import BaseModel
 
 from app.moduls.post_base import create_post
 from . import router_ds
-from app.ds import DSHook
+from app.ds import DSDict, DSHook
 
 
 class SpecData(BaseModel):
