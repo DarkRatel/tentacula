@@ -126,7 +126,7 @@ class SDSHook:
                  public_key: str = None, timeout: int = 300,
                  db_login: str = None, db_password: str = None, db_host: str = None, db_port: int = 5432,
                  database: str = None,
-                 url: str = None, cert_root: str = None, cert_file: str = None, cert_key: str = None,
+                 url: str | list = None, cert_root: str = None, cert_file: str = None, cert_key: str = None,
                  airflow_conn_id: str = None) -> None:
         """
         Класс создаёт сессию с DS, в рамках который будет исполнен запрос к каталогу
@@ -176,7 +176,7 @@ class SDSHook:
         self._login = login
         self._password = password
         self._host = host
-        self._url = url
+        self._url = url.split(',') if isinstance(url, str) else url
         self._port = port
         self._public_key = public_key
         self._timeout = timeout
@@ -230,7 +230,7 @@ class SDSHook:
             ssl_ctx = ssl.create_default_context(ssl.Purpose.SERVER_AUTH, cafile=self._cert_root)
             ssl_ctx.load_cert_chain(certfile=self._cert_file, keyfile=self._cert_key)
             transport = httpx.HTTPTransport(verify=ssl_ctx)
-            timeout = httpx.Timeout(connect=900, read=900, write=900, pool=900)
+            timeout = httpx.Timeout(connect=15, read=900, write=900, pool=900)
             self._connect_tent = httpx.Client(transport=transport, timeout=timeout)
         elif self._type_conn == self.CONN_DB:
             self._connect_db = psycopg2.connect(
@@ -260,30 +260,40 @@ class SDSHook:
         if self._type_conn == self.CONN_DS:
             return getattr(self._connect_ds, type_query)(**param_query)
         if self._type_conn == self.CONN_TENT:
-            url = f'{self._url}/{type_query}'
+            for url in self._url:
+                try:
+                    url = f'{url}/{type_query}'
 
-            with open(self._cert_file, "rb") as f:
-                cert_data = f.read()
+                    with open(self._cert_file, "rb") as f:
+                        cert_data = f.read()
 
-            cert = x509.load_pem_x509_certificate(cert_data, default_backend())
-            cn = cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
+                    cert = x509.load_pem_x509_certificate(cert_data, default_backend())
+                    cn = cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
 
-            self._logger.info(f"Run URL Connect: {url}"
-                              f", LDAP Host: {self._host}:{self._port}, Login: {self._login}"
-                              f", Client cert Subject: 'CN={cn}', Client cert Serial: {cert.serial_number}")
+                    self._logger.info(f"Run URL Connect: {url}"
+                                      f", LDAP Host: {self._host}, Port: {self._port}, Login: {self._login}"
+                                      f", Client cert Subject: 'CN={cn}', Client cert Serial: {cert.serial_number}")
 
-            for_send = {}
-            for k, v in param_query.items():
-                if isinstance(v, str) and 'password' in k.lower():
-                    for_send.update({k: '***'})
-                elif isinstance(v, dict):
-                    for_send.update({k: datetime_to_iso(v)})
-                else:
-                    for_send.update({k: v})
+                    for_send = {}
+                    for k, v in param_query.items():
+                        if isinstance(v, str) and 'password' in k.lower():
+                            for_send.update({k: '***'})
+                        elif isinstance(v, dict):
+                            for_send.update({k: datetime_to_iso(v)})
+                        else:
+                            for_send.update({k: v})
 
-            self._logger.info(f"Endpoint: {type_query}, Params: {for_send}, Base: {self._base}")
+                    self._logger.info(f"Endpoint: {type_query}, Params: {for_send}, Base: {self._base}")
 
-            response = self._connect_tent.post(url, json={**self._param_conn, **param_query})
+                    response = self._connect_tent.post(url, json={**self._param_conn, **param_query})
+
+                    break
+                except httpx.ConnectError as e:
+                    self._logger.warning(f"Host {url}: {e}")
+
+            else:
+                raise TimeoutError(f"Can't contact HTTP servers")
+
             try:
                 response.raise_for_status()
                 result = response.json()
@@ -297,6 +307,7 @@ class SDSHook:
                 return [DSDict(datetime_parser(v)) if isinstance(v, dict) else v for v in result['details']]
             else:
                 return result['details']
+
         if self._type_conn == self.CONN_DB:
             return datetime_parser(
                 request_db(
