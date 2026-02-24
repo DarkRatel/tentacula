@@ -290,7 +290,7 @@ class SDSHook:
                 if result['error']:
                     raise RuntimeError(result['details'])
             except Exception as e:
-                print(response.text)
+                self._logger.info(response.text)
                 raise e
 
             if isinstance(result['details'], list):
