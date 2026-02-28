@@ -7,9 +7,22 @@ conda env create -f environment_unix.yml -n tentacula_env
 # Активация окружения
 conda activate tentacula_env
 
-# Отключено, поскольку Conda сохраняет все необходимые зависимости
-# Установка зависимостей pip
-# pip install -r app/requirements.txt
+# Упаковка окружения
+conda-pack -n tentacula_env -o tentacula_env_unix.tar.gz
+
+######################################################################################
+
+# Удаление предыдущей версии
+conda env remove -n tentacula_env
+
+# Создание окружения Conda для Windows
+conda env create -f environment_win.yml -n tentacula_env
+
+# Активация окружения
+conda activate tentacula_env
+
+# Добавление Python-LDAP
+python -m pip install C:\Users\admin\Downloads\python_ldap-3.4.5-cp312-cp312-win_amd64.whl
 
 # Упаковка окружения
-conda-pack -n tentacula_env -o tentacula_env.tar.gz
+conda pack -n tentacula_env -o tentacula_env_win.zip --format zip
