@@ -44,9 +44,6 @@ def ds_set_member(connect, _logger, dry_run: bool, base: str,
             only_one=True,
         )[0]
 
-    # Из distinguishedName вычленяется часть c DC
-    group_domain = identity['distinguishedName'].lower()[identity['distinguishedName'].lower().find('dc='):]
-
     # Если член группы передан как строка, он конвертируется в массив
     if isinstance(members, str | dict | DSDict):
         members = [members]
@@ -59,18 +56,9 @@ def ds_set_member(connect, _logger, dry_run: bool, base: str,
         if isinstance(member, str):
             member = gen_filter_to_id(member, type_object='member', return_dict=True)
 
-        # Если distinguishedName есть и домен группы не совпадает с доменом члена
-        # будет попытка управлять членом как ForeignSecurityPrincipals
-        if member.get('distinguishedName') and group_domain.lower() not in member['distinguishedName'].lower():
-
-            # Если член имеем objectSid и является пользователем
-            if member.get('objectSid') and member.get('objectClass') == 'user':
-                # Добавления ID члена в виде ForeignSecurityPrincipals
-                members_id.append(f"CN={member['objectSid']},CN=ForeignSecurityPrincipals,{group_domain}")
-            else:
-                raise TypeError(f"Для кроссдоменного управления членством {member} требуется получить "
-                                f"словарь пользователя с минимальным набором атрибутов: "
-                                f"distinguishedName, objectSid, objectClass")
+        # Если в данных члена есть objectSid и он является пользователем, формируется <SID>
+        if member.get('objectSid') and member.get('objectClass') == 'user':
+            members_id.append(f"<SID={member['objectSid']}>")
 
         # Если в данных члена есть distinguishedName, он выберается как ID
         elif member.get('distinguishedName'):
@@ -89,7 +77,7 @@ def ds_set_member(connect, _logger, dry_run: bool, base: str,
             )[0]
             members_id.append(s_object['distinguishedName'])
 
-    _logger.debug(f"{action.capitalize()} member: DN: {identity['distinguishedName']}, members: {members_id}")
+    _logger.debug(f"{action.capitalize()} member: DN: {identity['distinguishedName']}, Members: {members_id}")
 
     # Перебор ID членов для внесения правок по каждому
     for m_id in members_id:
