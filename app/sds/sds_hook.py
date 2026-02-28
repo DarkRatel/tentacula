@@ -161,7 +161,7 @@ class SDSHook:
                 cert_file = cert_file or _data.get("cert_file", None)
                 cert_key = cert_key or _data.get("cert_key", None)
                 dry_run = dry_run or _data.get("dry_run", False)
-                log_level = log_level or _data.get("log_level", logging.INFO)
+                log_level = log_level or _data.get("log_level", None)
                 timeout = timeout or _data.get("timeout", None)
 
                 db_conn_id = _data.get("db_conn_id", None)
@@ -196,12 +196,11 @@ class SDSHook:
         self._logger = logging.getLogger(self.__class__.__name__)
 
         if log_level:
-            self._logger.setLevel(log_level)
+            self._logger.setLevel(self._log_level)
 
         self._param_conn = {k: v for k, v in
                             {'login': self._login, 'password': self._password, 'host': self._host, 'port': self._port,
                              'base': self._base, 'dry_run': self._dry_run, 'log_level': self._log_level}.items() if v}
-
         self._type_conn = None
 
         ### Выбор способа подключения
