@@ -1,7 +1,10 @@
+import os
+import subprocess
 import logging
 from datetime import datetime
 
 import ldap
+import ldap.sasl
 
 from .ds_dict import DSDict
 from .data import DataDSProperties, DS_TYPE_SCOPE, DS_TYPE_OBJECT, DS_GROUP_SCOPE, DS_GROUP_CATEGORY
@@ -19,20 +22,41 @@ prefix_ldap = {
 }
 
 
+def kinit_keytab(login: str, keytab: str):
+    # os.environ["KRB5CCNAME"] = cache
+    # , cache: str = None
+    os.environ["KRB5_CLIENT_KTNAME"] = keytab
+    subprocess.run(
+        ["kinit", "-k", "-t", keytab, login],
+        check=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+
+
 class DSHook:
-    def __init__(self, login: str, password: str, host: str | list, port: int = 636, base: str = None,
+    def __init__(self, host: str | list, login: str, password: str = None, keytab: str = None,
+                 port: int = 636, base: str = None,
                  dry_run: bool = False, log_level: int = None) -> None:
         """
         Класс создаёт сессию с DS, в рамках который будет исполнен запрос к каталогу
         (запрос описывается в рамках наследованных функций).
+        Последовательность авторизации:
+        1. Если указан "password", будет попытка авторизация по паролю;
+        2. Если указан "keytab", будет попытка запросить билеты на основе файла;
+        3. Если не указан "password" и "keytab", будет попытка использовать билеты Kerberos из текущей сессии
 
         Args:
             login: Логин учётной записи, от имени который создаётся сессия в DS
+            (для билетов Kerberos (Keytab) требуется userPrincipalName с доменом заглавными буквами)
             password: Пароль от учётной записи
+            keytab: Путь до Keytab-файла Если требуется запросить keytab
             host: Адрес контроллера домена (если в строке будут указаны хосты через запятую или передан список хостов,
             хук будет последовательно подключается к следующему, если предыдущий будет недоступен)
             port: Порт подключения: 389 или 636 (по умолчанию 636)
             base: Область каталога. Если не указать, при открытии сессии у DS будет запрошена область работы
+            (при определении зоны поиска автоматически исключает DomainDnsZones, ForestDnsZones)
             dry_run: Формирование запроса, без внесения изменений в DS
             log_level: Переопределение глубины логирования
         """
@@ -41,8 +65,9 @@ class DSHook:
 
         self._login = login
         self._password = password
-        self.base = base
+        self._keytab = keytab
 
+        self.base = base
         self._host = host.split(',') if isinstance(host, str) else host
         self._port = port
         if not prefix_ldap.get(port):
@@ -73,8 +98,14 @@ class DSHook:
 
                 self._logger.info(f"Run LDAP Connect: {connect_line}, login: {self._login}")
 
-                # Открытие сессии с DS
-                self._connect.simple_bind_s(self._login, self._password)
+                # Запрос выпуска билетов на основе Keytab
+                if self._keytab:
+                    kinit_keytab(login=self._login, keytab=self._keytab)
+
+                if self._password:  # Открытие сессии с DS по паролю
+                    self._connect.simple_bind_s(self._login, self._password)
+                else:
+                    self._connect.sasl_interactive_bind_s("", ldap.sasl.gssapi())  # Открытие сессии с DS по Keytab
 
                 break
             except ldap.SERVER_DOWN as e:
