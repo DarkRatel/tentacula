@@ -10,12 +10,14 @@ class SpecData(BaseModel):
     password: str
     host: str
     base: str = None
+    log_level: int = None
 
     identity: str | dict
 
 
-async def remove_object(login: str, password: str, host: str, identity: str | dict, base: str = None):
-    with DSHook(login=login, password=password, host=host, port=636, base=base) as ds:
+async def remove_object(login: str, password: str, host: str, identity: str | dict, base: str = None,
+                        log_level: int = None):
+    with DSHook(login=login, password=password, host=host, port=636, base=base, log_level=log_level) as ds:
         ds.remove_object(
             identity=identity
         )

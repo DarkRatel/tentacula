@@ -10,14 +10,15 @@ class SpecData(BaseModel):
     password: str
     host: str
     base: str = None
+    log_level: int = None
 
     identity: str | dict
     account_password: str
 
 
 async def set_account_password(login: str, password: str, host: str, identity: str | dict, account_password: str,
-                               base: str = None):
-    with DSHook(login=login, password=password, host=host, port=636, base=base) as ds:
+                               base: str = None, log_level: int = None):
+    with DSHook(login=login, password=password, host=host, port=636, base=base, log_level=log_level) as ds:
         ds.set_account_password(
             identity=identity,
             account_password=account_password

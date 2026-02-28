@@ -10,6 +10,7 @@ class SpecData(BaseModel):
     password: str
     host: str
     base: str = None
+    log_level: int = None
 
     identity: str | dict = None
     ldap_filter: str = None
@@ -19,8 +20,8 @@ class SpecData(BaseModel):
 
 async def get_computer(login: str, password: str, host: str, base: str = None, identity: str | dict = None,
                        ldap_filter: str = None, properties: str | list | tuple = None,
-                       search_scope: DS_TYPE_SCOPE = "subtree") -> list[DSDict]:
-    with DSHook(login=login, password=password, host=host, port=636, base=base) as ds:
+                       search_scope: DS_TYPE_SCOPE = "subtree", log_level: int = None) -> list[DSDict]:
+    with DSHook(login=login, password=password, host=host, port=636, base=base, log_level=log_level) as ds:
         result = ds.get_computer(
             identity=identity,
             ldap_filter=ldap_filter,

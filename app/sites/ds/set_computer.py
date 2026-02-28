@@ -10,6 +10,7 @@ class SpecData(BaseModel):
     password: str
     host: str
     base: str = None
+    log_level: int = None
 
     identity: str | dict
     remove: dict = None
@@ -21,8 +22,8 @@ class SpecData(BaseModel):
 
 async def set_computer(login: str, password: str, host: str, identity: str | dict, base: str = None,
                        remove: dict = None, add: dict[str, list] = None, replace: dict[str, list] = None,
-                       clear: list[str] = None, display_name: str = None):
-    with DSHook(login=login, password=password, host=host, port=636, base=base) as ds:
+                       clear: list[str] = None, display_name: str = None, log_level: int = None):
+    with DSHook(login=login, password=password, host=host, port=636, base=base, log_level=log_level) as ds:
         ds.set_computer(
             identity=identity,
             remove=remove,

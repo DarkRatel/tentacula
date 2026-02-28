@@ -10,6 +10,7 @@ class SpecData(BaseModel):
     password: str
     host: str
     base: str = None
+    log_level: int = None
 
     path: str
     name: str
@@ -17,8 +18,8 @@ class SpecData(BaseModel):
 
 
 async def new_contact(login: str, password: str, host: str, path: str, name: str,
-                      other_attributes: dict[str, list] = None, base: str = None):
-    with DSHook(login=login, password=password, host=host, port=636, base=base) as ds:
+                      other_attributes: dict[str, list] = None, base: str = None, log_level: int = None):
+    with DSHook(login=login, password=password, host=host, port=636, base=base, log_level=log_level) as ds:
         ds.new_contact(
             path=path,
             name=name,

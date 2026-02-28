@@ -10,6 +10,7 @@ class SpecData(BaseModel):
     password: str
     host: str
     base: str = None
+    log_level: int = None
 
     path: str
     name: str
@@ -21,8 +22,8 @@ class SpecData(BaseModel):
 
 async def new_group(login: str, password: str, host: str, path: str, name: str, sam_account_name: str,
                     group_scope: DS_GROUP_SCOPE, group_category: DS_GROUP_CATEGORY,
-                    other_attributes: dict[str, list] = None, base: str = None):
-    with DSHook(login=login, password=password, host=host, port=636, base=base) as ds:
+                    other_attributes: dict[str, list] = None, base: str = None, log_level: int = None):
+    with DSHook(login=login, password=password, host=host, port=636, base=base, log_level=log_level) as ds:
         ds.new_group(
             path=path,
             name=name,

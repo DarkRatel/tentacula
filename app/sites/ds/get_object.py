@@ -10,6 +10,7 @@ class SpecData(BaseModel):
     password: str
     host: str
     base: str = None
+    log_level: int = None
 
     identity: str | dict = None
     ldap_filter: str = None
@@ -20,8 +21,9 @@ class SpecData(BaseModel):
 
 async def get_object(login: str, password: str, host: str, base: str = None, identity: str | dict = None,
                      ldap_filter: str = None, properties: str | list | tuple = None,
-                     search_scope: DS_TYPE_SCOPE = "subtree", type_object: DS_TYPE_OBJECT = "object") -> list[DSDict]:
-    with DSHook(login=login, password=password, host=host, port=636, base=base) as ds:
+                     search_scope: DS_TYPE_SCOPE = "subtree", type_object: DS_TYPE_OBJECT = "object",
+                     log_level: int = None) -> list[DSDict]:
+    with DSHook(login=login, password=password, host=host, port=636, base=base, log_level=log_level) as ds:
         result = ds.get_object(
             identity=identity,
             ldap_filter=ldap_filter,

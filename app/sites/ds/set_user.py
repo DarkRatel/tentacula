@@ -11,6 +11,7 @@ class SpecData(BaseModel):
     password: str
     host: str
     base: str = None
+    log_level: int = None
 
     identity: str | dict
     remove: dict = None
@@ -32,8 +33,9 @@ async def set_user(login: str, password: str, host: str, identity: str | dict, b
                    replace: dict[str, list] = None, clear: list[str] = None, display_name: str = None,
                    sam_account_name: str = None, user_principal_name: str = None, enabled: bool = None,
                    password_never_expires: bool = None, account_not_delegated: bool = None,
-                   change_password_at_logon: bool = None, account_expiration_date: bool | datetime = None):
-    with DSHook(login=login, password=password, host=host, port=636, base=base) as ds:
+                   change_password_at_logon: bool = None, account_expiration_date: bool | datetime = None,
+                   log_level: int = None):
+    with DSHook(login=login, password=password, host=host, port=636, base=base, log_level=log_level) as ds:
         ds.set_user(
             identity=identity,
             remove=remove,
