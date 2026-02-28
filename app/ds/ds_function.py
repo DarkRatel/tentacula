@@ -13,7 +13,10 @@ def search_root_dse(connect, _logger):
     res = connect.search_s(base, search_scope, ldap_filter, properties)
     naming_contexts = [nc.decode() for nc in res[0][1]["namingContexts"]]
 
-    return [nc for nc in naming_contexts if nc.lower().startswith("dc=")][0]
+    return [nc for nc in naming_contexts
+            if nc.lower().startswith("dc=")
+            and 'DomainDnsZones'.lower() not in nc.lower()
+            and 'ForestDnsZones'.lower() not in nc.lower()][0]
 
 
 def search_attribute_range(connect, dn, attribute, _logger):
