@@ -47,14 +47,20 @@ def ds_set(connect, _logger, type_object, identity, base, dry_run: bool,
 
     if remove:
         for key, value in remove.items():
+            if not isinstance(value, list):
+                value = [value]
             list_object.append((ldap.MOD_DELETE, key, value))
 
     if add:
         for key, value in add.items():
+            if not isinstance(value, list):
+                value = [value]
             list_object.append((ldap.MOD_ADD, key, value))
 
     if replace:
         for key, value in replace.items():
+            if not isinstance(value, list):
+                value = [value]
             list_object.append((ldap.MOD_REPLACE, key, value))
 
     if clear:
