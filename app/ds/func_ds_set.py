@@ -39,6 +39,17 @@ ATTR_PROCESSING = DSDict({
 })
 
 
+def convert_value(attr, data):
+    if not isinstance(data, list):
+        data = [data]
+
+    for value in data:
+        if value is None:
+            raise ValueError(f"In '{attr}' value '{value}' cannot be None")
+
+    return data
+
+
 def ds_set(connect, _logger, type_object, identity, base, dry_run: bool,
            remove: dict[str, list] | None = None, add: dict[str, list] | None = None,
            replace: dict[str, list] | None = None, clear: list | tuple | None = None,
@@ -47,21 +58,15 @@ def ds_set(connect, _logger, type_object, identity, base, dry_run: bool,
 
     if remove:
         for key, value in remove.items():
-            if not isinstance(value, list):
-                value = [value]
-            list_object.append((ldap.MOD_DELETE, key, value))
+            list_object.append((ldap.MOD_DELETE, key, convert_value(key, value)))
 
     if add:
         for key, value in add.items():
-            if not isinstance(value, list):
-                value = [value]
-            list_object.append((ldap.MOD_ADD, key, value))
+            list_object.append((ldap.MOD_ADD, key, convert_value(key, value)))
 
     if replace:
         for key, value in replace.items():
-            if not isinstance(value, list):
-                value = [value]
-            list_object.append((ldap.MOD_REPLACE, key, value))
+            list_object.append((ldap.MOD_REPLACE, key, convert_value(key, value)))
 
     if clear:
         for key in clear:
