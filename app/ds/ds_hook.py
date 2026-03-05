@@ -296,9 +296,10 @@ class DSHook:
             only_one=False
         )
 
-    def set_object(self, identity: str | dict | DSDict, remove: dict = None, add: dict[str, list] = None,
-                   replace: dict[str, list] = None, clear: list[str] = None, display_name: str = None,
-                   description: str = None) -> None:
+    def set_object(self, identity: str | dict | DSDict,
+                   remove: dict[str, list | bool | str] = None, add: dict[str, list | bool | str] = None,
+                   replace: dict[str, list | bool | str] = None, clear: list[str] = None,
+                   display_name: str = None, description: str = None) -> None:
         """
         Функция изменения атрибутов объекта в DS.
 
@@ -320,11 +321,13 @@ class DSHook:
         ds_set(connect=self._connect, type_object="object", identity=identity, base=self.base, dry_run=self.dry_run,
                remove=remove, add=add, replace=replace, clear=clear, special=special, _logger=self._logger)
 
-    def set_user(self, identity: str | dict | DSDict, remove: dict = None, add: dict[str, list] = None,
-                 replace: dict[str, list] = None, clear: list[str] = None, display_name: str = None,
-                 description: str = None, sam_account_name: str = None, user_principal_name: str = None,
-                 enabled: bool = None, password_never_expires: bool = None, account_not_delegated: bool = None,
-                 change_password_at_logon: bool = None, account_expiration_date: bool | datetime | str = None) -> None:
+    def set_user(self, identity: str | dict | DSDict,
+                 remove: dict[str, list | bool | str] = None, add: dict[str, list | bool | str] = None,
+                 replace: dict[str, list | bool | str] = None, clear: list[str] = None,
+                 display_name: str = None, description: str = None, sam_account_name: str = None,
+                 user_principal_name: str = None, enabled: bool = None, password_never_expires: bool = None,
+                 account_not_delegated: bool = None, change_password_at_logon: bool = None,
+                 account_expiration_date: bool | datetime | str = None) -> None:
         """
         Функция изменения атрибутов пользователя в DS.
 
@@ -369,9 +372,10 @@ class DSHook:
         ds_set(connect=self._connect, type_object="user", identity=identity, base=self.base, dry_run=self.dry_run,
                remove=remove, add=add, replace=replace, clear=clear, special=special, _logger=self._logger)
 
-    def set_group(self, identity: str | dict | DSDict, remove: dict = None, add: dict[str, list] = None,
-                  replace: dict[str, list] = None, clear: list[str] = None, display_name: str = None,
-                  description: str = None, sam_account_name: str = None,
+    def set_group(self, identity: str | dict | DSDict,
+                  remove: dict[str, list | bool | str] = None, add: dict[str, list | bool | str] = None,
+                  replace: dict[str, list | bool | str] = None, clear: list[str] = None,
+                  display_name: str = None, description: str = None, sam_account_name: str = None,
                   group_scope: DS_GROUP_SCOPE = None, group_category: DS_GROUP_CATEGORY = None) -> None:
         """
         Функция изменения атрибутов группы в DS.
@@ -404,9 +408,10 @@ class DSHook:
         ds_set(connect=self._connect, type_object="group", identity=identity, base=self.base, dry_run=self.dry_run,
                remove=remove, add=add, replace=replace, clear=clear, special=special, _logger=self._logger)
 
-    def set_computer(self, identity: str | dict | DSDict, remove: dict = None, add: dict[str, list] = None,
-                     replace: dict[str, list] = None, clear: list[str] = None, display_name: str = None,
-                     description: str = None) -> None:
+    def set_computer(self, identity: str | dict | DSDict,
+                     remove: dict[str, list | bool | str] = None, add: dict[str, list | bool | str] = None,
+                     replace: dict[str, list | bool | str] = None, clear: list[str] = None,
+                     display_name: str = None, description: str = None) -> None:
         """
         Функция изменения атрибутов компьютера в DS.
 
@@ -428,9 +433,10 @@ class DSHook:
         ds_set(connect=self._connect, type_object="computer", identity=identity, base=self.base, dry_run=self.dry_run,
                remove=remove, add=add, replace=replace, clear=clear, special=special, _logger=self._logger)
 
-    def set_contact(self, identity: str | dict | DSDict, remove: dict = None, add: dict[str, list] = None,
-                    replace: dict[str, list] = None, clear: list[str] = None, display_name: str = None,
-                    description: str = None) -> None:
+    def set_contact(self, identity: str | dict | DSDict,
+                    remove: dict[str, list | bool | str] = None, add: dict[str, list | bool | str] = None,
+                    replace: dict[str, list | bool | str] = None, clear: list[str] = None,
+                    display_name: str = None, description: str = None) -> None:
         """
         Функция изменения атрибутов компьютера в DS.
 

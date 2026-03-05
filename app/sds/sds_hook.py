@@ -34,6 +34,7 @@ def datetime_parser(dct):
                 pass
     return dct
 
+
 def datetime_to_iso(dct):
     for k, v in dct.items():
         if isinstance(v, list):
@@ -48,6 +49,7 @@ def datetime_to_iso(dct):
             except ValueError:
                 pass
     return dct
+
 
 def encode_param(_public_key, param: dict):
     param = json.dumps(param).encode("utf-8")
@@ -450,9 +452,10 @@ class SDSHook:
 
         return self.query(type_query, param_query)
 
-    def set_object(self, identity: str | dict | DSDict, remove: dict = None, add: dict[str, list] = None,
-                   replace: dict[str, list] = None, clear: list[str] = None, display_name: str = None,
-                   description: str = None) -> None:
+    def set_object(self, identity: str | dict | DSDict,
+                   remove: dict[str, list | bool | str] = None, add: dict[str, list | bool | str] = None,
+                   replace: dict[str, list | bool | str] = None, clear: list[str] = None,
+                   display_name: str = None, description: str = None) -> None:
         """
         Функция изменения атрибутов объекта в DS.
 
@@ -473,11 +476,13 @@ class SDSHook:
 
         return self.query(type_query, param_query)
 
-    def set_user(self, identity: str | dict | DSDict, remove: dict = None, add: dict[str, list] = None,
-                 replace: dict[str, list] = None, clear: list[str] = None, display_name: str = None,
-                 description: str = None, sam_account_name: str = None, user_principal_name: str = None,
-                 enabled: bool = None, password_never_expires: bool = None, account_not_delegated: bool = None,
-                 change_password_at_logon: bool = None, account_expiration_date: bool | datetime = None) -> None:
+    def set_user(self, identity: str | dict | DSDict,
+                 remove: dict[str, list | bool | str] = None, add: dict[str, list | bool | str] = None,
+                 replace: dict[str, list | bool | str] = None, clear: list[str] = None,
+                 display_name: str = None, description: str = None, sam_account_name: str = None,
+                 user_principal_name: str = None, enabled: bool = None, password_never_expires: bool = None,
+                 account_not_delegated: bool = None, change_password_at_logon: bool = None,
+                 account_expiration_date: bool | datetime = None) -> None:
         """
         Функция изменения атрибутов пользователя в DS.
 
@@ -510,9 +515,10 @@ class SDSHook:
 
         return self.query(type_query, param_query)
 
-    def set_group(self, identity: str | dict | DSDict, remove: dict = None, add: dict[str, list] = None,
-                  replace: dict[str, list] = None, clear: list[str] = None, display_name: str = None,
-                  description: str = None, sam_account_name: str = None,
+    def set_group(self, identity: str | dict | DSDict,
+                  remove: dict[str, list | bool | str] = None, add: dict[str, list | bool | str] = None,
+                  replace: dict[str, list | bool | str] = None, clear: list[str] = None,
+                  display_name: str = None, description: str = None, sam_account_name: str = None,
                   group_scope: DS_GROUP_SCOPE = None, group_category: DS_GROUP_CATEGORY = None) -> None:
         """
         Функция изменения атрибутов группы в DS.
@@ -538,9 +544,10 @@ class SDSHook:
 
         return self.query(type_query, param_query)
 
-    def set_computer(self, identity: str | dict | DSDict, remove: dict = None, add: dict[str, list] = None,
-                     replace: dict[str, list] = None, clear: list[str] = None, display_name: str = None,
-                     description: str = None) -> None:
+    def set_computer(self, identity: str | dict | DSDict,
+                     remove: dict[str, list | bool | str] = None, add: dict[str, list | bool | str] = None,
+                     replace: dict[str, list | bool | str] = None, clear: list[str] = None,
+                     display_name: str = None, description: str = None) -> None:
         """
         Функция изменения атрибутов компьютера в DS.
 
@@ -561,9 +568,10 @@ class SDSHook:
 
         return self.query(type_query, param_query)
 
-    def set_contact(self, identity: str | dict | DSDict, remove: dict = None, add: dict[str, list] = None,
-                    replace: dict[str, list] = None, clear: list[str] = None, display_name: str = None,
-                    description: str = None) -> None:
+    def set_contact(self, identity: str | dict | DSDict,
+                    remove: dict[str, list | bool | str] = None, add: dict[str, list | bool | str] = None,
+                    replace: dict[str, list | bool | str] = None, clear: list[str] = None,
+                    display_name: str = None, description: str = None) -> None:
         """
         Функция изменения атрибутов компьютера в DS.
 

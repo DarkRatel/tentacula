@@ -23,8 +23,9 @@ class SpecData(BaseModel):
 
 
 async def set_group(login: str, password: str, host: str, identity: str | dict, base: str = None,
-                    remove: dict = None, add: dict[str, list] = None, replace: dict[str, list] = None,
-                    clear: list[str] = None, display_name: str = None,
+                    remove: dict[str, list | bool | str] = None, add: dict[str, list | bool | str] = None,
+                    replace: dict[str, list | bool | str] = None, clear: list[str] = None,
+                    display_name: str = None,
                     group_scope: DS_GROUP_SCOPE = None, group_category: DS_GROUP_CATEGORY = None,
                     log_level: int = None):
     with DSHook(login=login, password=password, host=host, port=636, base=base, log_level=log_level) as ds:
