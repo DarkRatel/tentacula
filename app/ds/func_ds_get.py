@@ -106,7 +106,12 @@ def repl(m):
     if key.lower() == 'objectguid':
         value = c_guid_to_binary(value)
     else:
-        value = ldap.filter.escape_filter_chars(value).replace(r"\2a", "*")
+        if value.endswith('))'):
+            value = ldap.filter.escape_filter_chars(value[:-1]) + ')'
+        else:
+            value = ldap.filter.escape_filter_chars(value)
+        value = value.replace(r"\2a", "*")
+
     return f"({key}{m.group(2)}{value})"
 
 
