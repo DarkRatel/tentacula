@@ -11,6 +11,7 @@ MIT License:
 - SQLAlchemy (https://github.com/sqlalchemy/sqlalchemy)
 - python-ldap (https://github.com/python-ldap/python-ldap)
 - pydantic (https://github.com/pydantic/pydantic)
+- smbprotocol (https://github.com/jborean93/smbprotocol)
 
 ──────────────────────────────────────────────
 BSD 3-Clause License:
