@@ -56,7 +56,7 @@ def _read_any(config: ConfigParser, chapter: str, name: str, type_: type = str, 
         chapter: Область конфигурационного файла
         name: Переменная
         type_: Ожидаемый тип атрибута
-        default: Значение, которое будет выставлено по умолчанию, если
+        default: Значение, которое будет выставлено по умолчанию
     Returns:
         Итоговое значение
     """
@@ -74,15 +74,16 @@ def _read_any(config: ConfigParser, chapter: str, name: str, type_: type = str, 
 
 def _read_file(value: str) -> str:
     """
-        Функция чтения значения из файла, если передан строка
+        Функция чтения значения из файла, если передана строка файла, вначале которой указано "cat ".
+        Если будет передано иное, оно будет восприниматься как содержимое значение и возвращено в исходном виде
     Args:
         value: Строка со значением или путь к файлу
     Returns:
         Строка со значением
     """
-    if value.startswith('/'):
-        with open(value, 'r') as file:
-            return file.read()
+    if 'cat ' in value:
+        with open(value.replace('cat ', ''), 'r') as file:
+            value = file.read()
     return value
 
 
@@ -99,11 +100,11 @@ def _read_json(config: ConfigParser, chapter: str, name: str, default=None) -> d
     env = os.getenv(f"TENTACULA__{chapter.upper()}__{name.upper()}")
 
     if env:
-        return json.loads(_read_file(env))
+        return json.loads(env)
     elif config.get(chapter, name):
-        return json.loads(_read_file(config.get(chapter, name)))
+        return json.loads(config.get(chapter, name))
     elif default is not None:
-        return default
+        return json.loads(default)
     else:
         raise ValueError(f"Not find [{chapter}][{name}]")
 
@@ -113,69 +114,83 @@ class _AppConfig:
         _config = ConfigParser()
         _config.read(CONFIG_PATH, encoding='utf-8-sig')
 
-        # Настройка сочлинения
-        self.COMPOSITION_ENABLED = _read_bool(config=_config, chapter='app', name='COMPOSITION_ENABLED', default=False)
+        # [app]
+        self.APP__LOGS_MASK_KEYS = _read_any(config=_config, chapter='app', name='LOGS_MASK_KEYS')
+        if self.APP__LOGS_MASK_KEYS:
+            self.APP__LOGS_MASK_KEYS = [i.lower() for i in self.APP__LOGS_MASK_KEYS.split(',')]
+            self.APP__LOGS_MASK_KEYS = list(set(self.APP__LOGS_MASK_KEYS + ['password', 'account_password']))
 
-        # Настройки присосок
-        self.SUCKERS_ENABLED = _read_bool(config=_config, chapter='app', name='SUCKERS_ENABLED', default=False)
-        if self.SUCKERS_ENABLED:
-            self.SUCKERS_FOLDER = _read_any(config=_config, chapter='app', name='SUCKERS_FOLDER').rstrip("/")
-            os.makedirs(self.SUCKERS_FOLDER, exist_ok=True)
+        self.APP__LOGS_FOLDER = _read_any(config=_config, chapter='app', name='LOGS_FOLDER').rstrip("/")
+        os.makedirs(self.APP__LOGS_FOLDER, exist_ok=True)
 
-        self.SUCKERS_DS = _read_bool(config=_config, chapter='app', name='SUCKERS_DS', default=False)
+        self.APP__DB_ASYNC_URL = _read_any(config=_config, chapter='app', name='DB_ASYNC_URL', default=False)
+        if self.APP__DB_ASYNC_URL:
+            self.APP__DB_ASYNC_URL = _read_file(self.APP__DB_ASYNC_URL)
 
-        # Настройка шедуллера
-        self.SCHEDULERS_ENABLED = _read_bool(config=_config, chapter='app', name='SCHEDULERS_ENABLED', default=False)
-        if self.SCHEDULERS_ENABLED:
-            self.SCHEDULERS_FOLDER = _read_any(config=_config, chapter='app', name='SCHEDULERS_FOLDER').rstrip("/")
-            os.makedirs(self.SCHEDULERS_FOLDER, exist_ok=True)
+        self.APP__SECRET_KEY = _read_any(config=_config, chapter='app', name='SECRET_KEY', default=False)
+        if self.APP__SECRET_KEY:
+            self.APP__SECRET_KEY = _read_file(self.APP__SECRET_KEY)
+            self.APP__SECRET_KEY = base64.b64decode(self.APP__SECRET_KEY.encode('utf-8'))
+            self.APP__SECRET_KEY = serialization.load_pem_private_key(self.APP__SECRET_KEY, password=None)
 
-        self.SCHEDULERS_DS = _read_bool(config=_config, chapter='app', name='SCHEDULERS_DS', default=False)
+        # [security]
+        self.SECURITY__AUTHENTICATION_TYPE = _read_any(config=_config, chapter='security', name='AUTHENTICATION_TYPE')
+        if self.SECURITY__AUTHENTICATION_TYPE not in ["CERTIFICATE", "NONE"]:
+            raise ValueError('AUTHENTICATION_TYPE must be CERTIFICATE or NONE')
 
-        if self.SCHEDULERS_DS:
-            self.DB_ASYNC_URL = _read_any(config=_config, chapter='app', name='DB_ASYNC_URL', default=None)
-            self.DB_ASYNC_URL = _read_file(self.DB_ASYNC_URL)
-            if 'cat ' in self.DB_ASYNC_URL:
-                with open(self.DB_ASYNC_URL.replace('cat ', ''), 'r') as file:
-                    self.DB_ASYNC_URL = file.read()
+        self.SECURITY__LIST_OF_PERMITTED = _read_json(config=_config, chapter='security', name='LIST_OF_PERMITTED')
 
-            self.SECRET_KEY = _read_any(config=_config, chapter='app', name='SECRET_KEY', default=None)
-            self.SECRET_KEY = _read_file(self.SECRET_KEY)
-            if 'cat ' in self.SECRET_KEY:
-                with open(self.SECRET_KEY.replace('cat ', ''), 'r') as file:
-                    self.SECRET_KEY = file.read()
-            self.SECRET_KEY = base64.b64decode(self.SECRET_KEY.encode('utf-8'))
-            self.SECRET_KEY = serialization.load_pem_private_key(self.SECRET_KEY, password=None)
+        # [web]
+        self.WEB__NGINX_FILE = _read_any(config=_config, chapter='web', name='NGINX_FILE', default=False)
+        if self.WEB__NGINX_FILE:
+            os.makedirs(os.path.dirname(self.WEB__NGINX_FILE), exist_ok=True)
 
-        # Параметры логирования приложения
-        self.LOGS_FOLDER = _read_any(config=_config, chapter='app', name='LOGS_FOLDER').rstrip("/")
-        os.makedirs(self.LOGS_FOLDER, exist_ok=True)
+            self.WEB__LOGS_FOLDER = _read_any(config=_config, chapter='web', name='LOGS_FOLDER').rstrip("/")
+            os.makedirs(self.WEB__LOGS_FOLDER, exist_ok=True)
 
-        self.LOGS_MASK_KEYS = _read_any(config=_config, chapter='app', name='LOGS_MASK_KEYS')
-        if self.LOGS_MASK_KEYS:
-            self.LOGS_MASK_KEYS = [i.lower() for i in self.LOGS_MASK_KEYS.split(',')]
-            self.LOGS_MASK_KEYS = list(set(self.LOGS_MASK_KEYS + ['password', 'account_password']))
+            self.WEB__PORT = _read_any(config=_config, chapter='web', name='PORT', type_=int)
+            self.WEB__SSL_CERTFILE = _read_any(config=_config, chapter='web', name='SSL_CERTFILE')
+            self.WEB__SSL_KEYFILE = _read_any(config=_config, chapter='web', name='SSL_KEYFILE')
+            self.WEB__SSL_CA_CERTS = _read_any(config=_config, chapter='web', name='SSL_CA_CERTS')
 
-        # Настройка NGINX
-        self.NGINX_FILE = _read_any(config=_config, chapter='web', name='NGINX_FILE', default=False)
-        if self.NGINX_FILE:
-            os.makedirs(os.path.dirname(self.NGINX_FILE), exist_ok=True)
+        # [composition]
+        self.COMPOSITION__ENABLED = _read_bool(config=_config, chapter='composition', name='ENABLED', default=False)
+        if self.COMPOSITION__ENABLED:
+            self.COMPOSITION__TRANSIT = _read_any(config=_config, chapter='composition', name='TRANSIT')
+            self.COMPOSITION__TRANSIT = _read_file('cat ' + self.COMPOSITION__TRANSIT)
+            self.COMPOSITION__TRANSIT = json.loads(self.COMPOSITION__TRANSIT)
 
-            self.NGINX_FOLDER_LOGS = _read_any(config=_config, chapter='web', name='NGINX_FOLDER_LOGS').rstrip("/")
-            os.makedirs(self.NGINX_FOLDER_LOGS, exist_ok=True)
+            self.COMPOSITION__LIST_OF_PERMITTED = _read_json(config=_config, chapter='composition',
+                                                             name='LIST_OF_PERMITTED')
+        else:
+            self.COMPOSITION__LIST_OF_PERMITTED = None
 
-            self.PORT = _read_any(config=_config, chapter='web', name='PORT', type_=int)
-            self.SSL_CERTFILE = _read_any(config=_config, chapter='web', name='SSL_CERTFILE')
-            self.SSL_KEYFILE = _read_any(config=_config, chapter='web', name='SSL_KEYFILE')
-            self.SSL_CA_CERTS = _read_any(config=_config, chapter='web', name='SSL_CA_CERTS')
+        # [suckers]
+        self.SUCKERS__ENABLED = _read_bool(config=_config, chapter='suckers', name='ENABLED', default=False)
+        if self.SUCKERS__ENABLED:
+            self.SUCKERS__FOLDER = _read_any(config=_config, chapter='suckers', name='FOLDER').rstrip("/")
+            os.makedirs(self.SUCKERS__FOLDER, exist_ok=True)
 
-        self.TRANSIT = _read_json(config=_config, chapter='composition', name='TRANSIT', default=None)
+        # [suckers_ds]
+        self.SUCKERS_DS__ENABLED = _read_bool(config=_config, chapter='suckers_ds', name='ENABLED', default=False)
+        if self.SUCKERS_DS__ENABLED:
+            self.SUCKERS_DS__LIST_OF_PERMITTED = _read_json(config=_config, chapter='suckers_ds',
+                                                            name='LIST_OF_PERMITTED')
+        else:
+            self.SUCKERS_DS__LIST_OF_PERMITTED = None
 
-        self.AUTHENTICATION_TYPE = _read_any(config=_config, chapter='security', name='AUTHENTICATION_TYPE')
-        if self.AUTHENTICATION_TYPE not in ["CERTIFICATE", ""]:
-            raise ValueError('AUTHENTICATION_TYPE must be CERTIFICATE or None')
-        if self.AUTHENTICATION_TYPE:
-            self.LIST_OF_CERTIFICATES = _read_any(config=_config, chapter='security', name='LIST_OF_CERTIFICATES')
-            self.LIST_OF_CERTIFICATES = json.loads(self.LIST_OF_CERTIFICATES)
+        # [schedulers]
+        self.SCHEDULERS__ENABLED = _read_bool(config=_config, chapter='schedulers', name='ENABLED', default=False)
+        if self.SCHEDULERS__ENABLED:
+            self.SCHEDULERS__FOLDER = _read_any(config=_config, chapter='schedulers', name='FOLDER').rstrip("/")
+            os.makedirs(self.SCHEDULERS__FOLDER, exist_ok=True)
+
+        # [schedulers_ds]
+        self.SCHEDULERS_DS__ENABLED = _read_bool(config=_config, chapter='schedulers_ds', name='ENABLED', default=False)
+        if self.SCHEDULERS_DS__ENABLED:
+            self.SCHEDULERS_DS__TRANSIT = _read_any(config=_config, chapter='schedulers_ds', name='TRANSIT')
+            self.SCHEDULERS_DS__TRANSIT = _read_file('cat ' + self.SCHEDULERS_DS__TRANSIT)
+            self.SCHEDULERS_DS__TRANSIT = json.loads(self.SCHEDULERS_DS__TRANSIT)
+
 
 AppConfig = _AppConfig()
