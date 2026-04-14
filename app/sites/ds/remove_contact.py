@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from app.moduls.post_base import create_post
 from . import router_ds
 from app.ds import DSHook
+from app.systems.config import AppConfig
 
 
 class SpecData(BaseModel):
@@ -23,4 +24,5 @@ async def remove_contact(login: str, password: str, host: str, identity: str | d
         )
 
 
-create_post("remove_contact", SpecData, remove_contact, router_ds)
+create_post(endpoint="remove_contact", func=remove_contact, access=AppConfig.SUCKERS_DS__LIST_OF_PERMITTED,
+            base_model=SpecData, router=router_ds)

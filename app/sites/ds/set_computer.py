@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from app.moduls.post_base import create_post
 from . import router_ds
 from app.ds import DSHook
+from app.systems.config import AppConfig
 
 
 class SpecData(BaseModel):
@@ -35,4 +36,5 @@ async def set_computer(login: str, password: str, host: str, identity: str | dic
         )
 
 
-create_post("set_computer", SpecData, set_computer, router_ds)
+create_post(endpoint="set_computer", func=set_computer, access=AppConfig.SUCKERS_DS__LIST_OF_PERMITTED,
+            base_model=SpecData, router=router_ds)

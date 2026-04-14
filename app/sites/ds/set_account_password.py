@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from app.moduls.post_base import create_post
 from . import router_ds
 from app.ds import DSHook
+from app.systems.config import AppConfig
 
 
 class SpecData(BaseModel):
@@ -25,4 +26,5 @@ async def set_account_password(login: str, password: str, host: str, identity: s
         )
 
 
-create_post("set_account_password", SpecData, set_account_password, router_ds)
+create_post(endpoint="set_account_password", func=set_account_password, access=AppConfig.SUCKERS_DS__LIST_OF_PERMITTED,
+            base_model=SpecData, router=router_ds)

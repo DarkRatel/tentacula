@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from app.moduls.post_base import create_post
 from . import router_ds
 from app.ds import DSDict, DSHook, DS_TYPE_SCOPE
+from app.systems.config import AppConfig
 
 
 class SpecData(BaseModel):
@@ -32,4 +33,5 @@ async def get_computer(login: str, password: str, host: str, base: str = None, i
     return result
 
 
-create_post("get_computer", SpecData, get_computer, router_ds)
+create_post(endpoint="get_computer", func=get_computer, access=AppConfig.SUCKERS_DS__LIST_OF_PERMITTED,
+            base_model=SpecData, router=router_ds)

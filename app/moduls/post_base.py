@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from fastapi import APIRouter, status, Depends, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 
-from app.moduls.auth.auth_manager import current_user, User
+from app.moduls.auth import get_current_user, User
 from app.systems.logging import logger
 from app.ds import DSDict
 
@@ -88,9 +88,10 @@ def json_encoder(obj):
     raise TypeError(repr(obj) + " is not JSON serializable")
 
 
-def create_post(endpoint: str, base_model: Type[BaseModel],
+def create_post(router: APIRouter,
+                endpoint: str, base_model: Type[BaseModel],
                 func: Callable[..., Awaitable[ReturnType]],
-                router: APIRouter):
+                access: list[str] = None):
     """
     Функция генерации присосок.
     Если присоска предполагает возращение списка, он будет возращён частями, если элементов больше 1500 (по умолчанию).
@@ -100,6 +101,8 @@ def create_post(endpoint: str, base_model: Type[BaseModel],
         base_model: BaseModel входных данных
         func: Функция для исполнения
         router: APIRouter
+        access: Список ID-клиентов, которые могут быть воспользоваться эндпоинтом
+         (используется если включена аутентификация)
     """
 
     if '/' == endpoint:
@@ -116,7 +119,8 @@ def create_post(endpoint: str, base_model: Type[BaseModel],
     def create_handler():
         """Функция создания функции для эндпоинта"""
 
-        async def path_function_wrapper(request: Request, data: base_model, user: User = Depends(current_user)):
+        async def path_function_wrapper(request: Request, data: base_model,
+                                        user: User = Depends(get_current_user(access))):
             try:
                 input_dada = data.model_dump()
 

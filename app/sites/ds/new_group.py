@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from app.moduls.post_base import create_post
 from . import router_ds
 from app.ds import DSHook, DS_GROUP_SCOPE, DS_GROUP_CATEGORY
+from app.systems.config import AppConfig
 
 
 class SpecData(BaseModel):
@@ -34,4 +35,5 @@ async def new_group(login: str, password: str, host: str, path: str, name: str, 
         )
 
 
-create_post("new_group", SpecData, new_group, router_ds)
+create_post(endpoint="new_group", func=new_group, access=AppConfig.SUCKERS_DS__LIST_OF_PERMITTED,
+            base_model=SpecData, router=router_ds)
