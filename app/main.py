@@ -28,16 +28,23 @@ async def lifespan(app: FastAPI):
     if AppConfig.NGINX_FILE:
         logger.info(f"Generate NGINX Conf: {AppConfig.NGINX_FILE}")
 
-        with open(f"{os.getcwd()}/app/nginx/nginx.conf.j2", "r") as f:
-            template = Template(f.read()).render(
-                folder_logs=AppConfig.NGINX_FOLDER_LOGS,
-                port=AppConfig.PORT,
-                ssl_certfile=AppConfig.SSL_CERTFILE,
-                ssl_keyfile=AppConfig.SSL_KEYFILE,
-                ssl_ca_certs=AppConfig.SSL_CA_CERTS,
-            )
+        if AppConfig.WEB__SSL_ENABLED:
+            with open(f"{os.getcwd()}/app/nginx/nginx_ssl.conf.j2", "r") as f:
+                template = Template(f.read()).render(
+                    folder_logs=AppConfig.WEB__LOGS_FOLDER,
+                    port=AppConfig.WEB__PORT,
+                    ssl_certfile=AppConfig.WEB__SSL_CERTFILE,
+                    ssl_keyfile=AppConfig.WEB__SSL_KEYFILE,
+                    ssl_ca_certs=AppConfig.WEB__SSL_CA_CERTS,
+                )
+        else:
+            with open(f"{os.getcwd()}/app/nginx/nginx_nossl.conf.j2", "r") as f:
+                template = Template(f.read()).render(
+                    folder_logs=AppConfig.WEB__LOGS_FOLDER,
+                    port=AppConfig.WEB__PORT,
+                )
 
-        with open(AppConfig.NGINX_FILE, "w") as f:
+        with open(AppConfig.WEB__NGINX_FILE, "w") as f:
             f.write(template)
 
         logger.info(f"Generate Done")

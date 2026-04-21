@@ -1,0 +1,52 @@
+worker_processes  auto;
+
+events {
+    worker_connections 1024;
+}
+
+http {
+    # Формат обычных логов
+    # $time_iso8601 - Дата и время в формате ISO 8601
+    # $request_id - Уникальный идентификатор запроса
+    # $remote_addr - IP-адрес клиента
+    # $request - Полная строка HTTP-запроса (<method> <URI> <protocol>)
+    # $status - HTTP-код ответа
+    # $body_bytes_sent - Количество байт тела ответа, отправленных клиенту (без заголовков)
+    # $http_referer - Значение HTTP-заголовка Referer (откуда пришёл пользователь)
+    # $http_user_agent - Значение HTTP-заголовка User-Agent
+    log_format tentacula '[$time_iso8601] [$request_id] "$remote_addr" "$request" "$status" "$body_bytes_sent"'
+                         ' "$http_referer" "$http_user_agent"';
+
+    default_type  application/octet-stream;
+
+    # Логи HTTP-запросов
+    access_log {{ folder_logs }}/nginx_access.log tentacula;
+    error_log  {{ folder_logs }}/nginx_error.log info;
+
+    sendfile          on;
+    keepalive_timeout 30s; # Время, в течение которого уже завершённое HTTP-соединение остаётся открытым
+
+    server {
+        listen      {{ port }};
+        server_name _;
+
+        # Прокисрование всех запросов на uvicorn
+        location / {
+            proxy_pass http://127.0.0.1:8000/;
+
+            proxy_http_version 1.1;           # Поддержка HTTP 1.1 для стриминга контента
+            proxy_set_header   Connection ""; # Переназначение заголовка Connection
+
+            proxy_connect_timeout 10; # Время, за которое NGINX должен установить TCP-соединение (TLS, backend)
+            proxy_send_timeout    300s; # Время ожидания между отправкой частей запроса от NGINX
+            proxy_read_timeout    300s; # Максимальное время ожидания между байтами ответа
+            send_timeout          900s; # Время ожидания между отправкой байт ответа от NGINX → клиенту
+
+            proxy_set_header X-Forwarded-Proto $scheme;                    # Протокол подключения
+            proxy_set_header Host              $host;                      # Имя хоста (сервера)
+            proxy_set_header X-Server-IP       $server_addr;               # IP-адрес хоста (сервера)
+            proxy_set_header X-Request-ID      $request_id;                # Уникальный код сессии
+            proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for; # IP-адреса клиента
+        }
+    }
+}
