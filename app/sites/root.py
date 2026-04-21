@@ -5,12 +5,12 @@ from fastapi.routing import APIRoute
 from fastapi.responses import Response, JSONResponse
 from pydantic import BaseModel
 
-from app.moduls.auth.auth_manager import current_user, User
 from app.main import app
+from app.systems.config import AppConfig
+from app.moduls.auth import get_current_user
 
-
-@app.get("/", response_class=Response)
-async def sucker_root_get(user: User = Depends(current_user)) -> JSONResponse:
+@app.post("/", response_class=Response)
+async def sucker_root_get(user = Depends(get_current_user(AppConfig.SECURITY__LIST_OF_PERMITTED))) -> JSONResponse:
     """Корневой сайт приложения, возвращающий все опубликованные эндпоинты"""
     routes_info = []
     for route in app.routes:
