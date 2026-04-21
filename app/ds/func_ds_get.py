@@ -45,8 +45,9 @@ ATTR_EXTEND = {
         'PasswordNotRequired': lambda v: True if UAC_FLAGS["PASSWD_NOTREQD"] & v else False,
     },
     "groupType": {
-        'GroupScope': lambda v: return_groupscope(convert_grouptype(v)),
-        'GroupCategory': lambda v: "Security" if "SECURITY_ENABLED" in convert_grouptype(v) else "Distribution"
+        'GroupScope': lambda v: return_groupscope(convert_grouptype(v, skip_error=True)),
+        'GroupCategory':
+            lambda v: "Security" if "SECURITY_ENABLED" in convert_grouptype(v, skip_error=True) else "Distribution"
     },
     "pwdLastSet": {
         'ChangePasswordAtLogon': lambda v: True if v == 0 else False,

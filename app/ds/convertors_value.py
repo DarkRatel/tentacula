@@ -38,13 +38,14 @@ def uac_to_flags(numeric: int) -> list:
     return [name for name, bit in UAC_FLAGS.items() if numeric & bit]
 
 
-def convert_grouptype(request: tuple | list | int) -> int | list:
+def convert_grouptype(request: tuple | list | int, skip_error: bool = False) -> int | list:
     """
     Функция для конвертации флагов групп MS AD из текстовой формы в числовую и наоборот.
     Функция написана в соответствии с описанием 'MS-ADTS 2.2.12 Group Type Flags'.
     С помощью параметра 'mutex_group' реализованы взаимоисключающие группы флагов
     (т.е., может быть установлено не более одного флага из каждой mutex_group).
-    :param request: Флаг или сочетание флагов в текстовой или числовой форме
+    :param request: Флаг или сочетание флагов в текстовой или числовой форме.
+    :param skip_error: Игнорировать ошибки во флагах
     :return:
     - если в функцию был передан флаг/сочетание флагов в текстовой форме - флаг/сочетание флагов в числовой форме;
     - если в функцию был передан флаг/сочетание флагов в числовой форме - список флагов в текстовой форме.
@@ -56,7 +57,7 @@ def convert_grouptype(request: tuple | list | int) -> int | list:
         result = [flag for flag in _grouptype_flags if flag['name'] in request]
 
         mutex_result = [flag['mutex_group'] for flag in result]
-        if len(mutex_result) != len(set(mutex_result)):
+        if not skip_error and len(mutex_result) != len(set(mutex_result)):
             raise ValueError(f'Одновременная установка флагов {[entry["name"] for entry in result]} невозможна')
 
         return sum(flag['value'] for flag in result)
@@ -66,7 +67,7 @@ def convert_grouptype(request: tuple | list | int) -> int | list:
         result = [flag for flag in _grouptype_flags if request & flag['value'] == flag['value']]
 
         mutex_result = [flag['mutex_group'] for flag in result]
-        if len(mutex_result) != len(set(mutex_result)):
+        if not skip_error and len(mutex_result) != len(set(mutex_result)):
             raise ValueError(f'Одновременная установка флагов {[entry["name"] for entry in result]} невозможна')
 
         return [entry["name"] for entry in result]
