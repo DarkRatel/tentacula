@@ -9,9 +9,9 @@ from app.systems.config import AppConfig
 router_sucker = APIRouter(prefix="/sucker")
 
 # Импорт пользовательских присосок из папки
-for filename in os.listdir(AppConfig.SUCKERS_FOLDER):
+for filename in os.listdir(AppConfig.SUCKERS__FOLDER):
     if filename.endswith(".py") and filename != "__init__.py":
-        module_path = os.path.join(AppConfig.SUCKERS_FOLDER, filename)
+        module_path = os.path.join(AppConfig.SUCKERS__FOLDER, filename)
         module_name = filename[:-3]
 
         spec = importlib.util.spec_from_file_location(module_name, module_path)
