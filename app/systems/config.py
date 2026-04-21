@@ -111,6 +111,7 @@ def _read_json(config: ConfigParser, chapter: str, name: str, default=None) -> d
 
 class _AppConfig:
     def __init__(self):
+        """Функция со всеми переменными конфигурации полученными из env, .cfg или """
         _config = ConfigParser()
         _config.read(CONFIG_PATH, encoding='utf-8-sig')
 
@@ -138,7 +139,8 @@ class _AppConfig:
         if self.SECURITY__AUTHENTICATION_TYPE not in ["CERTIFICATE", "NONE", "LDAP_MEMBERS"]:
             raise ValueError('AUTHENTICATION_TYPE must be CERTIFICATE, LDAP_MEMBERS or NONE')
 
-        self.SECURITY__LIST_OF_PERMITTED = _read_json(config=_config, chapter='security', name='LIST_OF_PERMITTED')
+        self.SECURITY__LIST_OF_PERMITTED = _read_json(config=_config, chapter='security', name='LIST_OF_PERMITTED',
+                                                      default='[]')
 
         if self.SECURITY__AUTHENTICATION_TYPE == "LDAP_MEMBERS":
             self.SECURITY__HOST = _read_any(config=_config, chapter='security', name='HOST')
@@ -167,10 +169,8 @@ class _AppConfig:
             self.COMPOSITION__TRANSIT = _read_file('cat ' + self.COMPOSITION__TRANSIT)
             self.COMPOSITION__TRANSIT = json.loads(self.COMPOSITION__TRANSIT)
 
-            self.COMPOSITION__LIST_OF_PERMITTED = _read_json(config=_config, chapter='composition',
-                                                             name='LIST_OF_PERMITTED')
-        else:
-            self.COMPOSITION__LIST_OF_PERMITTED = None
+        self.COMPOSITION__LIST_OF_PERMITTED = _read_json(config=_config, chapter='composition',
+                                                         name='LIST_OF_PERMITTED', default='[]')
 
         # [suckers]
         self.SUCKERS__ENABLED = _read_bool(config=_config, chapter='suckers', name='ENABLED', default=False)
@@ -180,11 +180,8 @@ class _AppConfig:
 
         # [suckers_ds]
         self.SUCKERS_DS__ENABLED = _read_bool(config=_config, chapter='suckers_ds', name='ENABLED', default=False)
-        if self.SUCKERS_DS__ENABLED:
-            self.SUCKERS_DS__LIST_OF_PERMITTED = _read_json(config=_config, chapter='suckers_ds',
-                                                            name='LIST_OF_PERMITTED')
-        else:
-            self.SUCKERS_DS__LIST_OF_PERMITTED = None
+        self.SUCKERS_DS__LIST_OF_PERMITTED = _read_json(config=_config, chapter='suckers_ds', name='LIST_OF_PERMITTED',
+                                                        default='[]')
 
         # [schedulers]
         self.SCHEDULERS__ENABLED = _read_bool(config=_config, chapter='schedulers', name='ENABLED', default=False)
