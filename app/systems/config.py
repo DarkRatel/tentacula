@@ -135,10 +135,14 @@ class _AppConfig:
 
         # [security]
         self.SECURITY__AUTHENTICATION_TYPE = _read_any(config=_config, chapter='security', name='AUTHENTICATION_TYPE')
-        if self.SECURITY__AUTHENTICATION_TYPE not in ["CERTIFICATE", "NONE"]:
-            raise ValueError('AUTHENTICATION_TYPE must be CERTIFICATE or NONE')
+        if self.SECURITY__AUTHENTICATION_TYPE not in ["CERTIFICATE", "NONE", "LDAP_MEMBERS"]:
+            raise ValueError('AUTHENTICATION_TYPE must be CERTIFICATE, LDAP_MEMBERS or NONE')
 
         self.SECURITY__LIST_OF_PERMITTED = _read_json(config=_config, chapter='security', name='LIST_OF_PERMITTED')
+
+        if self.SECURITY__AUTHENTICATION_TYPE == "LDAP_MEMBERS":
+            self.SECURITY__HOST = _read_any(config=_config, chapter='security', name='HOST')
+            self.SECURITY__BASE = _read_any(config=_config, chapter='security', name='BASE')
 
         # [web]
         self.WEB__NGINX_FILE = _read_any(config=_config, chapter='web', name='NGINX_FILE', default=False)
@@ -149,9 +153,12 @@ class _AppConfig:
             os.makedirs(self.WEB__LOGS_FOLDER, exist_ok=True)
 
             self.WEB__PORT = _read_any(config=_config, chapter='web', name='PORT', type_=int)
-            self.WEB__SSL_CERTFILE = _read_any(config=_config, chapter='web', name='SSL_CERTFILE')
-            self.WEB__SSL_KEYFILE = _read_any(config=_config, chapter='web', name='SSL_KEYFILE')
-            self.WEB__SSL_CA_CERTS = _read_any(config=_config, chapter='web', name='SSL_CA_CERTS')
+
+            self.WEB__SSL_ENABLED = _read_bool(config=_config, chapter='web', name='SSL_ENABLED', default=False)
+            if self.WEB__SSL_ENABLED:
+                self.WEB__SSL_CERTFILE = _read_any(config=_config, chapter='web', name='SSL_CERTFILE')
+                self.WEB__SSL_KEYFILE = _read_any(config=_config, chapter='web', name='SSL_KEYFILE')
+                self.WEB__SSL_CA_CERTS = _read_any(config=_config, chapter='web', name='SSL_CA_CERTS')
 
         # [composition]
         self.COMPOSITION__ENABLED = _read_bool(config=_config, chapter='composition', name='ENABLED', default=False)
@@ -191,6 +198,9 @@ class _AppConfig:
             self.SCHEDULERS_DS__TRANSIT = _read_any(config=_config, chapter='schedulers_ds', name='TRANSIT')
             self.SCHEDULERS_DS__TRANSIT = _read_file('cat ' + self.SCHEDULERS_DS__TRANSIT)
             self.SCHEDULERS_DS__TRANSIT = json.loads(self.SCHEDULERS_DS__TRANSIT)
+
+            if not all([self.APP__DB_ASYNC_URL, self.APP__SECRET_KEY]):
+                raise AttributeError("Schedulers_ds requires APP__DB_ASYNC_URL and APP__SECRET_KEY")
 
 
 AppConfig = _AppConfig()
