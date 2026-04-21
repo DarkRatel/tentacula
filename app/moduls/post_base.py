@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from fastapi import APIRouter, status, Depends, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 
-from app.moduls.auth import get_current_user, User
+from app.moduls.auth import get_current_user
 from app.systems.logging import logger
 from app.ds import DSDict
 
@@ -119,8 +119,7 @@ def create_post(router: APIRouter,
     def create_handler():
         """Функция создания функции для эндпоинта"""
 
-        async def path_function_wrapper(request: Request, data: base_model,
-                                        user: User = Depends(get_current_user(access))):
+        async def path_function_wrapper(request: Request, data: base_model, user=Depends(get_current_user(access))):
             try:
                 input_dada = data.model_dump()
 
