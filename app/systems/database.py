@@ -6,7 +6,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from app.systems.config import AppConfig
 
 # Создаем асинхронный движок базы данных
-engine = create_async_engine(AppConfig.DB_ASYNC_URL, echo=True, future=True)
+engine = create_async_engine(AppConfig.APP__DB_ASYNC_URL, echo=True, future=True)
 
 # Фабрика сессий
 AsyncSessionLocal = async_sessionmaker(
