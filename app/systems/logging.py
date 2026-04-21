@@ -5,13 +5,12 @@ import logging
 from datetime import datetime, timezone
 
 import contextvars
-from logging.handlers import RotatingFileHandler
 import sys
 
 from app.systems.config import AppConfig
 
 # Преобразование списка ключей маскирования, в регулярное выражение
-MASK_COMPILE = re.compile(f"{'|'.join([f'^{i}$' for i in AppConfig.LOGS_MASK_KEYS])}", flags=re.IGNORECASE)
+MASK_COMPILE = re.compile(f"{'|'.join([f'^{i}$' for i in AppConfig.APP__LOGS_MASK_KEYS])}", flags=re.IGNORECASE)
 
 
 def mask_dict(data):
@@ -59,7 +58,7 @@ class SafeFormatter(logging.Formatter):
 LOG_FORMAT = "[%(asctime)s] [%(s_id)s|%(levelname)s|%(name)s] %(message)s"
 
 file_handler = logging.FileHandler(
-    f'{AppConfig.LOGS_FOLDER}/api.log',
+    f'{AppConfig.APP__LOGS_FOLDER}/api.log',
     encoding="utf-8"
 )
 file_handler.setFormatter(SafeFormatter(LOG_FORMAT))
