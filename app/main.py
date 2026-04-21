@@ -12,21 +12,21 @@ from app.systems.logging import logger, s_id_ctx_var, setup_logging
 # Настройка root'ового logging, для перехвата всех данных выводимых в логгер
 setup_logging()
 
-if any([AppConfig.SCHEDULERS_ENABLED, AppConfig.SCHEDULERS_DS]):
+if any([AppConfig.SCHEDULERS__ENABLED, AppConfig.SCHEDULERS_DS__ENABLED]):
     scheduler = AsyncIOScheduler()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info(f"COMPOSITION_ENABLED: {AppConfig.COMPOSITION_ENABLED}")
-    logger.info(f"    SUCKERS_ENABLED: {AppConfig.SUCKERS_ENABLED}")
-    logger.info(f"         SUCKERS_DS: {AppConfig.SUCKERS_DS}")
-    logger.info(f" SCHEDULERS_ENABLED: {AppConfig.SCHEDULERS_ENABLED}")
-    logger.info(f"      SCHEDULERS_DS: {AppConfig.SCHEDULERS_DS}")
+    logger.info(f"  COMPOSITION__ENABLED: {AppConfig.COMPOSITION__ENABLED}")
+    logger.info(f"      SUCKERS__ENABLED: {AppConfig.SUCKERS__ENABLED}")
+    logger.info(f"   SUCKERS_DS__ENABLED: {AppConfig.SUCKERS_DS__ENABLED}")
+    logger.info(f"   SCHEDULERS__ENABLED: {AppConfig.SCHEDULERS__ENABLED}")
+    logger.info(f"SCHEDULERS_DS__ENABLED: {AppConfig.SCHEDULERS_DS__ENABLED}")
 
     # Блок настройки NGINX-файла
-    if AppConfig.NGINX_FILE:
-        logger.info(f"Generate NGINX Conf: {AppConfig.NGINX_FILE}")
+    if AppConfig.WEB__NGINX_FILE:
+        logger.info(f"Generate NGINX Conf: {AppConfig.WEB__NGINX_FILE}")
 
         if AppConfig.WEB__SSL_ENABLED:
             with open(f"{os.getcwd()}/app/nginx/nginx_ssl.conf.j2", "r") as f:
@@ -54,9 +54,10 @@ async def lifespan(app: FastAPI):
     # Блок включения приложения
 
     # Если шедуллер активен
-    if AppConfig.SCHEDULERS_ENABLED or AppConfig.SCHEDULERS_DS:
+    if any([AppConfig.SCHEDULERS__ENABLED, AppConfig.SCHEDULERS_DS__ENABLED]):
 
-        if AppConfig.SCHEDULERS_DS:
+        # Если указана строка подключения к БД и включен SCHEDULERS_DS__ENABLED
+        if AppConfig.SCHEDULERS_DS__ENABLED and AppConfig.APP__DB_ASYNC_URL:
             from app.systems.database import init_db
 
             logger.info("Generate table for SCHEDULERS_DS")
@@ -80,6 +81,13 @@ async def system_middleware(request: Request, call_next):
     # Сохранение уникального кода сессии в контекст, для добавления в логи
     s_id_ctx_var.set(request.headers["x-request-id"])
     response = await call_next(request)
+
+    logger.info(f"Protocol: {request.headers['x-forwarded-proto'].upper()}, "
+                f"Host name: {request.headers['host']}, "
+                f"Host ip: {request.headers['x-server-ip']}, "
+                f"URL: {request.url}, "
+                f"Client ip: {request.headers.get('x-forwarded-for')}")
+
     return response
 
 
@@ -87,13 +95,13 @@ async def system_middleware(request: Request, call_next):
 importlib.import_module("app.sites.root")
 
 # Импорт пользовательских щупалец, если включено
-if AppConfig.SUCKERS_ENABLED:
+if AppConfig.SUCKERS__ENABLED:
     from app.sites.suckers import router_sucker
 
     app.include_router(router_sucker)
 
 # Импорт щупалец связанных с DS, если включено
-if AppConfig.SUCKERS_DS:
+if AppConfig.SUCKERS_DS__ENABLED:
     from app.sites.ds import router_ds
 
     for i in ["add_group_member", "get_computer", "get_contact", "get_group", "get_group_member", "get_object",
@@ -105,6 +113,12 @@ if AppConfig.SUCKERS_DS:
 
     app.include_router(router_ds)
 
-# Импорт шеделлера для работы с DS, если включен
-if AppConfig.SCHEDULERS_DS:
+# Импорт сочленения для работы с DS, если включен
+if AppConfig.COMPOSITION__ENABLED:
+    from app.sites.composition import router_composition
+
+    app.include_router(router_composition)
+
+# Импорт шедуллера для работы с DS, если включен
+if AppConfig.SCHEDULERS_DS__ENABLED:
     importlib.import_module(f"app.scheduler.ds")
