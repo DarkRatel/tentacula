@@ -162,9 +162,13 @@ class SDSHook:
             tent_pass: Пароль для авторизации на эндпоинте Тентакли
         """
 
-        if any([airflow_conn_id]):
-            from airflow.hooks.base_hook import BaseHook
-            _config = BaseHook.get_connection(airflow_conn_id)
+        # Если все ключи переданы через Airflow
+        if any([airflow_conn_id, airflow_conn]):
+            if airflow_conn_id:
+                from airflow.hooks.base_hook import BaseHook
+                _config = BaseHook.get_connection(airflow_conn_id)
+            else:
+                _config = airflow_conn
 
             login = login or _config.login
             password = password or _config.password
