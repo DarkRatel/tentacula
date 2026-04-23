@@ -124,12 +124,11 @@ class SDSHook:
     CONN_DB = 3
 
     def __init__(self, login: str = None, password: str = None, host: str = None, port: int = 636, base: str = None,
-                 dry_run: bool = False, log_level: int = None,
-                 public_key: str = None, timeout: int = 300,
+                 dry_run: bool = False, log_level: int = None, public_key: str = None, timeout: int = 300,
                  db_login: str = None, db_password: str = None, db_host: str = None, db_port: int = 5432,
-                 database: str = None,
-                 url: str | list = None, cert_root: str = None, cert_file: str = None, cert_key: str = None,
-                 airflow_conn_id: str = None) -> None:
+                 database: str = None, url: str | list = None, cert_root: str = None, cert_file: str = None,
+                 cert_key: str = None, tent_login: str = None, tent_pass: str = None, airflow_conn_id: str = None,
+                 airflow_conn=None) -> None:
         """
         Класс создаёт сессию с DS, в рамках который будет исполнен запрос к каталогу
         (запрос описывается в рамках наследованных функций).
