@@ -36,6 +36,7 @@ class Tasker(Base):
 
 
 def decode_param(param) -> dict:
+    """Функция расшифровки данных полученных из таблицы, с использованием закрытого ключа"""
     param = base64.b64decode(param.encode('utf-8'))
 
     key_len = int.from_bytes(param[:4], "big")
