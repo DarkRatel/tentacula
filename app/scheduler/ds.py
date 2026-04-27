@@ -21,7 +21,7 @@ from app.main import scheduler
 
 # Шаблон таблицы
 class Tasker(Base):
-    __tablename__ = "ds_tasker"
+    __tablename__ = "tentacula_ds_tasker"
 
     id = Column(Integer, primary_key=True, index=True)
     status = Column(String, nullable=False)
