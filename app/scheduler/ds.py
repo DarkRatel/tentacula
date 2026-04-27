@@ -48,7 +48,7 @@ def decode_param(param) -> dict:
     ciphertext = param[offset + 12:]
 
     # Расшифровка AES-ключа
-    aes_key = AppConfig.SECRET_KEY.decrypt(
+    aes_key = AppConfig.APP__SECRET_KEY.decrypt(
         encrypted_aes_key,
         padding.OAEP(
             mgf=padding.MGF1(algorithm=hashes.SHA256()),
