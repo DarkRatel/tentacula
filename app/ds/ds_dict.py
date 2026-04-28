@@ -1,8 +1,12 @@
+"""
+Словарь игнорирующий заглавные буквы в ключах и сохраняющий формат исходных ключей
+"""
+
 _no_default = object()
 
 
 class DSDict(dict):
-    """Case-insensitive dictionary that preserves original keys."""
+    """Регистронечувствительный словарь, сохраняющий исходные ключи"""
 
     def __init__(self, seed=None, **kwargs):
         super().__init__()
