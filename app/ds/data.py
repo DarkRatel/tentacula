@@ -1,6 +1,10 @@
+"""
+Константы со стачными значениями
+"""
 import typing
 from enum import Enum
 
+# Набор переменных для проверки корректности получаемых значений в ключах
 DS_TYPE_SCOPE = typing.Literal["base", "onelevel", "subtree"]
 DS_TYPE_OBJECT = typing.Literal["object", "user", "group", "computer", "contact"]
 DS_TYPE_OBJECT_SYSTEM = typing.Literal["object", "user", "group", "computer", "contact", "member"]
