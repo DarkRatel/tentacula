@@ -97,7 +97,8 @@ def convert_object_class(name: str = None, flags: list = None) -> str | list:
         "builtinDomain": ['top', 'builtinDomain'],
         "foreignSecurityPrincipal": ['top', 'foreignSecurityPrincipal'],
         "domainDNS": ['top', 'domain', 'domainDNS'],
-        "inetOrgPerson": ['top', 'user', 'person', 'inetOrgPerson', 'organizationalPerson']
+        "inetOrgPerson": ['top', 'user', 'person', 'inetOrgPerson', 'organizationalPerson'],
+        "container": ['top', 'container']
     }
 
     if isinstance(flags, list):
