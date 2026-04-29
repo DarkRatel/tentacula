@@ -24,6 +24,8 @@ def ds_new(connect, _logger, dry_run: bool, type_object: DS_TYPE_OBJECT, path: s
         for key, value in other_attributes.items():
             if key in dict_object:
                 raise RuntimeError(f"Атрибут {key} уже был определён. Удалите его из other_attributes")
+            if not isinstance(value, list):
+                other_attributes[key] = [value]
         dict_object.update(**other_attributes)
 
     _logger.info(f"New {type_object}: DN: {dn}, "
