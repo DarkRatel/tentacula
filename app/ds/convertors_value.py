@@ -1,3 +1,8 @@
+"""
+Общие функции для конвертации значений
+"""
+
+# Флаги и связанный байт для атрибута userAccountControl
 UAC_FLAGS = {
     'SCRIPT': 0x0001,
     'ACCOUNTDISABLE': 0x0002,
@@ -23,6 +28,7 @@ UAC_FLAGS = {
     'PARTIAL_SECRETS_ACCOUNT': 0x04000000
 }
 
+# Флаги и связанный байт для атрибута groupType
 _grouptype_flags = [
     {'name': 'BUILTIN_LOCAL_GROUP', 'value': 1, 'mutex_group': 1, },  # System group
     {'name': 'ACCOUNT_GROUP', 'value': 2, 'mutex_group': 2, },  # Global
@@ -33,8 +39,59 @@ _grouptype_flags = [
     {'name': 'SECURITY_ENABLED', 'value': -2147483648, 'mutex_group': 1, },  # Security or not bite Distribution
 ]
 
+# Словарь сопоставления короткого имени объекта с его флагами в атрибуте ObjectClass
+_types_object = {
+    "user": ['top', 'person', 'organizationalPerson', 'user'],
+    "contact": ['top', 'person', 'organizationalPerson', 'contact'],
+    "group": ['top', 'group'],
+    "computer": ['top', 'person', 'organizationalPerson', 'user', 'computer'],
+    "organizationalUnit": ['top', 'organizationalUnit'],
+    "builtinDomain": ['top', 'builtinDomain'],
+    "foreignSecurityPrincipal": ['top', 'foreignSecurityPrincipal'],
+    "domainDNS": ['top', 'domain', 'domainDNS'],
+    "inetOrgPerson": ['top', 'user', 'person', 'inetOrgPerson', 'organizationalPerson'],
+    "container": ['top', 'container'],
+    "lostAndFound": ['top', 'lostAndFound'],
+    "infrastructureUpdate": ['top', 'infrastructureUpdate'],
+    "msDS-QuotaContainer": ['top', 'msDS-QuotaContainer'],
+    "rpcContainer": ['top', 'container', 'rpcContainer'],
+    "fileLinkTracking": ['top', 'fileLinkTracking'],
+    "linkTrackVolumeTable": ['top', 'fileLinkTracking', 'linkTrackVolumeTable'],
+    "linkTrackObjectMoveTable": ['top', 'fileLinkTracking', 'linkTrackObjectMoveTable'],
+    "domainPolicy": ['top', 'leaf', 'domainPolicy'],
+    "classStore": ['top', 'classStore'],
+    "groupPolicyContainer": ['top', 'container', 'groupPolicyContainer'],
+    "nTFRSSettings": ['top', 'applicationSettings', 'nTFRSSettings'],
+    "dfsConfiguration": ['top', 'dfsConfiguration'],
+    "ipsecPolicy": ['top', 'ipsecBase', 'ipsecPolicy'],
+    "ipsecISAKMPPolicy": ['top', 'ipsecBase', 'ipsecISAKMPPolicy'],
+    "ipsecNFA": ['top', 'ipsecBase', 'ipsecNFA'],
+    "ipsecNegotiationPolicy": ['top', 'ipsecBase', 'ipsecNegotiationPolicy'],
+    "ipsecFilter": ['top', 'ipsecBase', 'ipsecFilter'],
+    "msDS-PasswordSettingsContainer": ['top', 'msDS-PasswordSettingsContainer'],
+    "msImaging-PSPs": ['top', 'container', 'msImaging-PSPs'],
+    "msTPM-InformationObjectsContainer": ['top', 'msTPM-InformationObjectsContainer'],
+    "samServer": ['top', 'securityObject', 'samServer'],
+    "rIDManager": ['top', 'rIDManager'],
+    "rIDSet": ['top', 'rIDSet'],
+    "dnsZone": ['top', 'dnsZone'],
+    "dnsNode": ['top', 'dnsNode'],
+    "msDFSR-GlobalSettings": ['top', 'msDFSR-GlobalSettings'],
+    "msDFSR-ReplicationGroup": ['top', 'msDFSR-ReplicationGroup'],
+    "msDFSR-Content": ['top', 'msDFSR-Content'],
+    "msDFSR-ContentSet": ['top', 'msDFSR-ContentSet'],
+    "msDFSR-Topology": ['top', 'msDFSR-Topology'],
+    "msDFSR-Member": ['top', 'msDFSR-Member'],
+    "msDFSR-LocalSettings": ['top', 'msDFSR-LocalSettings'],
+    "msDFSR-Subscriber": ['top', 'msDFSR-Subscriber'],
+    "msDFSR-Subscription": ['top', 'msDFSR-Subscription'],
+    "serviceConnectionPoint": ['top', 'leaf', 'connectionPoint', 'serviceConnectionPoint'],
+    "secret": ['top', 'leaf', 'secret'],
+}
+
 
 def uac_to_flags(numeric: int) -> list:
+    """Функция возвращает флаги userAccountControl на основе integer"""
     return [name for name, bit in UAC_FLAGS.items() if numeric & bit]
 
 
@@ -77,7 +134,7 @@ def convert_grouptype(request: tuple | list | int, skip_error: bool = False) -> 
 
 def convert_object_class(name: str = None, flags: list = None) -> str | list:
     """
-    Функция двухсторонней конвертации значений атрибута "ObjectClass". Требуется использовать один из ключей,
+    Функция двухсторонней конвертации значений атрибута "objectClass". Требуется использовать один из ключей,
     в зависимости от типа входных данных
     :param flags: Список флагов характеризующих тип объекта
     :param name: Короткое имя объекта
@@ -88,63 +145,34 @@ def convert_object_class(name: str = None, flags: list = None) -> str | list:
     elif all([name, flags]):
         raise RuntimeError("Недопустимо использовать оба ключа")
 
-    list_types = {
-        "user": ['top', 'person', 'organizationalPerson', 'user'],
-        "contact": ['top', 'person', 'organizationalPerson', 'contact'],
-        "group": ['top', 'group'],
-        "computer": ['top', 'person', 'organizationalPerson', 'user', 'computer'],
-        "organizationalUnit": ['top', 'organizationalUnit'],
-        "builtinDomain": ['top', 'builtinDomain'],
-        "foreignSecurityPrincipal": ['top', 'foreignSecurityPrincipal'],
-        "domainDNS": ['top', 'domain', 'domainDNS'],
-        "inetOrgPerson": ['top', 'user', 'person', 'inetOrgPerson', 'organizationalPerson'],
-        "container": ['top', 'container'],
-        "lostAndFound": ['top', 'lostAndFound'],
-        "infrastructureUpdate": ['top', 'infrastructureUpdate'],
-        "msDS-QuotaContainer": ['top', 'msDS-QuotaContainer'],
-        "rpcContainer": ['top', 'container', 'rpcContainer'],
-        "fileLinkTracking": ['top', 'fileLinkTracking'],
-        "linkTrackVolumeTable": ['top', 'fileLinkTracking', 'linkTrackVolumeTable'],
-        "linkTrackObjectMoveTable": ['top', 'fileLinkTracking', 'linkTrackObjectMoveTable'],
-        "domainPolicy": ['top', 'leaf', 'domainPolicy'],
-        "classStore": ['top', 'classStore'],
-        "groupPolicyContainer": ['top', 'container', 'groupPolicyContainer'],
-        "nTFRSSettings": ['top', 'applicationSettings', 'nTFRSSettings'],
-        "dfsConfiguration": ['top', 'dfsConfiguration'],
-        "ipsecPolicy": ['top', 'ipsecBase', 'ipsecPolicy'],
-        "ipsecISAKMPPolicy": ['top', 'ipsecBase', 'ipsecISAKMPPolicy'],
-        "ipsecNFA": ['top', 'ipsecBase', 'ipsecNFA'],
-        "ipsecNegotiationPolicy": ['top', 'ipsecBase', 'ipsecNegotiationPolicy'],
-        "ipsecFilter": ['top', 'ipsecBase', 'ipsecFilter'],
-        "msDS-PasswordSettingsContainer": ['top', 'msDS-PasswordSettingsContainer'],
-        "msImaging-PSPs": ['top', 'container', 'msImaging-PSPs'],
-        "msTPM-InformationObjectsContainer": ['top', 'msTPM-InformationObjectsContainer'],
-        "samServer": ['top', 'securityObject', 'samServer'],
-        "rIDManager": ['top', 'rIDManager'],
-        "rIDSet": ['top', 'rIDSet'],
-        "dnsZone": ['top', 'dnsZone'],
-        "dnsNode": ['top', 'dnsNode'],
-        "msDFSR-GlobalSettings": ['top', 'msDFSR-GlobalSettings'],
-        "msDFSR-ReplicationGroup": ['top', 'msDFSR-ReplicationGroup'],
-        "msDFSR-Content": ['top', 'msDFSR-Content'],
-        "msDFSR-ContentSet": ['top', 'msDFSR-ContentSet'],
-        "msDFSR-Topology": ['top', 'msDFSR-Topology'],
-        "msDFSR-Member": ['top', 'msDFSR-Member'],
-        "msDFSR-LocalSettings": ['top', 'msDFSR-LocalSettings'],
-        "msDFSR-Subscriber": ['top', 'msDFSR-Subscriber'],
-        "msDFSR-Subscription": ['top', 'msDFSR-Subscription'],
-        "serviceConnectionPoint": ['top', 'leaf', 'connectionPoint', 'serviceConnectionPoint'],
-        "secret": ['top', 'leaf', 'secret'],
-    }
-
     if isinstance(flags, list):
-        for key, item in list_types.items():
+        for key, item in _types_object.items():
             if sorted(flags) == sorted(item):
                 return key
         return flags
     elif isinstance(name, str):
-        if name.lower() in list_types:
-            return list_types[name.lower()]
+        if name.lower() in _types_object:
+            return _types_object[name.lower()]
         raise RuntimeError("Неизвестный тип объекта. Невозможно подобрать список ключей")
     else:
         raise RuntimeError(f"Переданы недопустимы данные. flags: {flags}, name: {name}")
+
+
+def convert_value(key: str, value: str | bool) -> list[str]:
+    """Конвертирование полученного значения для атрибута в строку и список.
+    Актуально для ключей хука add, replace и remove
+
+    Args:
+        key: Имя атрибута
+        value: Значение
+    """
+    if not isinstance(value, list):
+        value = [value]
+
+    for index, v in enumerate(value):
+        if isinstance(v, bool):
+            value[index] = str(v).upper()
+        elif v is None:
+            raise ValueError(f"In '{key}' value '{v}' cannot be None")
+
+    return value
