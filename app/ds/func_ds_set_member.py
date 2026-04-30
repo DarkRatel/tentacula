@@ -1,3 +1,6 @@
+"""
+Функция изменения членства в группе СК
+"""
 import ldap
 
 from .data import DS_ACTION_MEMBER
@@ -11,7 +14,7 @@ def ds_set_member(connect, _logger, dry_run: bool, base: str,
     Изменение членства в группе.
 
     Args:
-        connect: Открытое подключение к DS
+        connect: Переменная с открытой сессией с СК
         _logger: Получение логгера для вывода логов
         dry_run: Исполнение запроса без отправки команды на изменения
         base: Область работы
@@ -84,7 +87,17 @@ def ds_set_member(connect, _logger, dry_run: bool, base: str,
         func(connect=connect, _logger=_logger, group=identity['distinguishedName'], member=m_id, dry_run=dry_run)
 
 
-def add_member(connect, _logger, group: str, member, dry_run: bool):
+def add_member(connect, _logger, group: str, member: str, dry_run: bool):
+    """
+    Функция добавления объекта в группу. Если объект уже в группе, ошибка (ldap.ALREADY_EXISTS) игнорируется
+
+    Args:
+        connect: Переменная с открытой сессией с СК
+        _logger: Получение логгера для вывода логов
+        dry_run: Исполнение запроса без отправки команды на изменения
+        group: ID группы
+        member: ID объекта
+    """
     _logger.info(f"Add member: DN: {group}, Operation: {ldap.MOD_ADD}, Member: {member}")
     if not dry_run:
         try:
@@ -95,7 +108,21 @@ def add_member(connect, _logger, group: str, member, dry_run: bool):
         _logger.warning("Enabled dry run")
 
 
-def remove_member(connect, _logger, group: str, member, dry_run: bool):
+def remove_member(connect, _logger, group: str, member: str, dry_run: bool):
+    """
+    Функция исключения объекта из группы. Если возвращается ошибка отсутствия атрибута (ldap.NO_SUCH_ATTRIBUTE),
+    то она игнорируется (значит у группы нет членов). Ошибка отклонения запроса (ldap.UNWILLING_TO_PERFORM)
+    так же игнорируется, поскольку в рамках кросс-доменного включения попытка удалить объект, которого нет в атрибуте
+    приводит к созданию данного исключения -
+    ошибка может возвращаться и в иных причинах, поэтому помечается предупреждением
+
+    Args:
+        connect: Переменная с открытой сессией с СК
+        _logger: Получение логгера для вывода логов
+        dry_run: Исполнение запроса без отправки команды на изменения
+        group: ID группы
+        member: ID объекта
+    """
     _logger.info(f"Remove member: DN: {group}, Operation: {ldap.MOD_DELETE}, Member: {member}")
     if not dry_run:
         try:
