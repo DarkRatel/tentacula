@@ -81,11 +81,10 @@ def ds_set_member(connect, _logger, dry_run: bool, base: str,
 
     # Перебор ID членов для внесения правок по каждому
     for m_id in members_id:
-        func(connect=connect, _logger=_logger, group=identity['distinguishedName'], member=m_id, dry_run=dry_run,
-             current_members=identity.get('member', None))
+        func(connect=connect, _logger=_logger, group=identity['distinguishedName'], member=m_id, dry_run=dry_run)
 
 
-def add_member(connect, _logger, group: str, member, dry_run: bool, current_members: list | None):
+def add_member(connect, _logger, group: str, member, dry_run: bool):
     _logger.info(f"Add member: DN: {group}, Operation: {ldap.MOD_ADD}, Member: {member}")
     if not dry_run:
         try:
@@ -96,7 +95,7 @@ def add_member(connect, _logger, group: str, member, dry_run: bool, current_memb
         _logger.warning("Enabled dry run")
 
 
-def remove_member(connect, _logger, group: str, member, dry_run: bool, current_members: list | None):
+def remove_member(connect, _logger, group: str, member, dry_run: bool):
     _logger.info(f"Remove member: DN: {group}, Operation: {ldap.MOD_DELETE}, Member: {member}")
     if not dry_run:
         try:
