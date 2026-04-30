@@ -15,7 +15,7 @@ def ds_new(connect, _logger, dry_run: bool, type_object: DS_TYPE_OBJECT, path: s
     dict_object.update({'cn': [name], 'name': [name]})
 
     if display_name:
-        dict_object.update({'displayName': [name]})
+        dict_object.update({'displayName': [display_name]})
 
     if extend:
         dict_object.update(**extend)
