@@ -3,7 +3,7 @@
 """
 
 # Флаги и связанный байт для атрибута userAccountControl
-UAC_FLAGS = {
+_UAC_FLAGS = {
     'SCRIPT': 0x0001,
     'ACCOUNTDISABLE': 0x0002,
     'HOMEDIR_REQUIRED': 0x0008,
@@ -29,7 +29,7 @@ UAC_FLAGS = {
 }
 
 # Флаги и связанный байт для атрибута groupType
-_grouptype_flags = [
+_GROUPTYPE_FLAGS = [
     {'name': 'BUILTIN_LOCAL_GROUP', 'value': 1, 'mutex_group': 1, },  # System group
     {'name': 'ACCOUNT_GROUP', 'value': 2, 'mutex_group': 2, },  # Global
     {'name': 'RESOURCE_GROUP', 'value': 4, 'mutex_group': 2, },  # DomainLocal
@@ -40,7 +40,7 @@ _grouptype_flags = [
 ]
 
 # Словарь сопоставления короткого имени объекта с его флагами в атрибуте ObjectClass
-_types_object = {
+_TYPES_OBJECT = {
     "user": ['top', 'person', 'organizationalPerson', 'user'],
     "contact": ['top', 'person', 'organizationalPerson', 'contact'],
     "group": ['top', 'group'],
@@ -92,7 +92,7 @@ _types_object = {
 
 def uac_to_flags(numeric: int) -> list:
     """Функция возвращает флаги userAccountControl на основе integer"""
-    return [name for name, bit in UAC_FLAGS.items() if numeric & bit]
+    return [name for name, bit in _UAC_FLAGS.items() if numeric & bit]
 
 
 def convert_grouptype(request: tuple | list | int, skip_error: bool = False) -> int | list:
@@ -109,9 +109,9 @@ def convert_grouptype(request: tuple | list | int, skip_error: bool = False) -> 
     """
 
     if isinstance(request, (list, tuple)):
-        if not all(item in [flag['name'] for flag in _grouptype_flags] for item in request):
+        if not all(item in [flag['name'] for flag in _GROUPTYPE_FLAGS] for item in request):
             raise ValueError('Переданы некорректные значения типов группы')
-        result = [flag for flag in _grouptype_flags if flag['name'] in request]
+        result = [flag for flag in _GROUPTYPE_FLAGS if flag['name'] in request]
 
         mutex_result = [flag['mutex_group'] for flag in result]
         if not skip_error and len(mutex_result) != len(set(mutex_result)):
@@ -119,9 +119,9 @@ def convert_grouptype(request: tuple | list | int, skip_error: bool = False) -> 
 
         return sum(flag['value'] for flag in result)
     elif isinstance(request, int):
-        if request & sum(flag['value'] for flag in _grouptype_flags) != request:
+        if request & sum(flag['value'] for flag in _GROUPTYPE_FLAGS) != request:
             raise ValueError('Переданы некорректное числовое значение')
-        result = [flag for flag in _grouptype_flags if request & flag['value'] == flag['value']]
+        result = [flag for flag in _GROUPTYPE_FLAGS if request & flag['value'] == flag['value']]
 
         mutex_result = [flag['mutex_group'] for flag in result]
         if not skip_error and len(mutex_result) != len(set(mutex_result)):
@@ -146,13 +146,13 @@ def convert_object_class(name: str = None, flags: list = None) -> str | list:
         raise RuntimeError("Недопустимо использовать оба ключа")
 
     if isinstance(flags, list):
-        for key, item in _types_object.items():
+        for key, item in _TYPES_OBJECT.items():
             if sorted(flags) == sorted(item):
                 return key
         return flags
     elif isinstance(name, str):
-        if name.lower() in _types_object:
-            return _types_object[name.lower()]
+        if name.lower() in _TYPES_OBJECT:
+            return _TYPES_OBJECT[name.lower()]
         raise RuntimeError("Неизвестный тип объекта. Невозможно подобрать список ключей")
     else:
         raise RuntimeError(f"Переданы недопустимы данные. flags: {flags}, name: {name}")
@@ -160,6 +160,7 @@ def convert_object_class(name: str = None, flags: list = None) -> str | list:
 
 def convert_value(key: str, value: str | bool) -> list[str]:
     """Конвертирование полученного значения для атрибута в строку и список.
+    Булевое значение конвертируется в строку для совместимости с LDAP
     Актуально для ключей хука add, replace и remove
 
     Args:
