@@ -57,7 +57,8 @@ ATTR_EXTEND = {
     "groupType": {
         'GroupScope': lambda v: return_groupscope(convert_grouptype(v, skip_error=True)),
         'GroupCategory':
-            lambda v: "Security" if "SECURITY_ENABLED" in convert_grouptype(v, skip_error=True) else "Distribution"
+            lambda v: "Security" if "SECURITY_ENABLED" in convert_grouptype(v, skip_error=True) else "Distribution",
+        'FlagsGT': lambda v: convert_grouptype(v, skip_error=True),
     },
     "pwdLastSet": {
         'ChangePasswordAtLogon': lambda v: True if v == 0 else False,
