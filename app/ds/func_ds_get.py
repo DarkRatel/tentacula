@@ -13,7 +13,7 @@ from ldap.controls.libldap import SimplePagedResultsControl
 from .data import DataDSLDAP, DS_TYPE_SCOPE, DS_TYPE_OBJECT_SYSTEM
 from .ds_dict import DSDict
 from .attributes_type import ATTR_TYPES
-from .convertors_value import convert_grouptype, convert_object_class, UAC_FLAGS
+from .convertors_value import convert_grouptype, convert_object_class, uac_to_flags, _UAC_FLAGS
 from .ds_function import search_attribute_range
 
 # Особая обработка атрибутов, которая противоречит стандартному правилу чтения атрибута указанного в TYPE_HANDLERS
