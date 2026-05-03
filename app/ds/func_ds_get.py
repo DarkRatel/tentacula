@@ -48,10 +48,11 @@ TYPE_HANDLERS = {
 # значение это возможные специальные атрибуты, которые могут быть созданы из исходного
 ATTR_EXTEND = {
     "userAccountControl": {
-        'Enabled': lambda v: False if UAC_FLAGS["ACCOUNTDISABLE"] & v else True,
-        'PasswordNeverExpires': lambda v: True if UAC_FLAGS["DONT_EXPIRE_PASSWORD"] & v else False,
-        'AccountNotDelegated': lambda v: True if UAC_FLAGS["NOT_DELEGATED"] & v else False,
-        'PasswordNotRequired': lambda v: True if UAC_FLAGS["PASSWD_NOTREQD"] & v else False,
+        'Enabled': lambda v: False if _UAC_FLAGS["ACCOUNTDISABLE"] & v else True,
+        'PasswordNeverExpires': lambda v: True if _UAC_FLAGS["DONT_EXPIRE_PASSWORD"] & v else False,
+        'AccountNotDelegated': lambda v: True if _UAC_FLAGS["NOT_DELEGATED"] & v else False,
+        'PasswordNotRequired': lambda v: True if _UAC_FLAGS["PASSWD_NOTREQD"] & v else False,
+        'FlagsUAC': lambda v: uac_to_flags(v),
     },
     "groupType": {
         'GroupScope': lambda v: return_groupscope(convert_grouptype(v, skip_error=True)),
