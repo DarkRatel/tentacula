@@ -60,7 +60,7 @@ ATTR_PROCESSING = DSDict({
 def ds_set(connect, _logger, type_object: DS_TYPE_OBJECT_SYSTEM, dry_run: bool,
            identity: str | DSDict | dict, base: str, remove: dict[str, list | str | bool] | None = None,
            add: dict[str, list | str | bool] | None = None, replace: dict[str, list | str | bool] | None = None,
-           clear: list | tuple | None = None, special: dict | None = None):
+           clear: list | tuple | None = None, special: dict | None = None) -> None:
     """
     Функция изменения объекта
 
