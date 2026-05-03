@@ -109,15 +109,18 @@ def ds_set(connect, _logger, type_object, identity, base, dry_run: bool,
                  f"new value: {[(a, k, ['***'] if k.lower() == 'unicodepwd' else v) for a, k, v in list_object]}, "
                  f"old value: {result}")
 
-    temp = []
-    for (action, key, values) in list_object:
+
+    for index, (action, key, values) in enumerate(list_object):
+        # Проверка, что сформирован список из значений
+        if not isinstance(values, list):
+            raise ValueError(f"In {key} not list or None")
+
         if values is None:
-            temp += [(action, key, None)]
+            list_object[index] = [(action, key, None)]
         elif key.lower() == 'unicodePwd'.lower():
-            temp += [(action, key, [f'"{v}"'.encode("utf-16-le") for v in values])]
+            list_object[index] = [(action, key, [f'"{v}"'.encode("utf-16-le") for v in values])]
         else:
-            temp += [(action, key, [v.encode("utf-8") for v in values])]
-    list_object = temp
+            list_object[index] = [(action, key, [v.encode("utf-8") for v in values])]
 
     _logger.debug(f"Set {type_object}: DN: {result['distinguishedName']}, "
                   f"new value: {[(a, k, ['***'] if k.lower() == 'unicodepwd' else v) for a, k, v in list_object]}, "
