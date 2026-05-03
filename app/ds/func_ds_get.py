@@ -14,7 +14,6 @@ from .data import DataDSLDAP, DS_TYPE_SCOPE, DS_TYPE_OBJECT_SYSTEM
 from .ds_dict import DSDict
 from .attributes_type import ATTR_TYPES
 from .convertors_value import convert_grouptype, convert_object_class, uac_to_flags, _UAC_FLAGS
-from .ds_function import search_attribute_range
 
 # Особая обработка атрибутов, которая противоречит стандартному правилу чтения атрибута указанного в TYPE_HANDLERS
 ATTR_SPECIAL = DSDict({
@@ -66,7 +65,7 @@ ATTR_EXTEND = {
 }
 
 
-def object_processing(connect, _logger, data, properties, properties_shadow):
+def object_processing(connect, _logger, data, properties, properties_shadow) -> DSDict:
     """Основная функция конвертации данных полученных объекта полученных из СК"""
     result = DSDict()
     # Перебор полученных атрибутов и значений
@@ -113,7 +112,7 @@ def object_processing(connect, _logger, data, properties, properties_shadow):
 pattern = re.compile(r'\(([A-Za-z0-9]*)([><~]?=)((?:\([^=]*\)|\),|[^)])+)\)(?=$|[)(])')
 
 
-def repl(m):
+def repl(m) -> str:
     """Функция для изоляции значений в строке поиска.
     Регулярное выражение разбивает каждую скобку на три элемента: атрибут, логический оператор и искомое значение.
     Искомое значение конвертируется и изолируется
@@ -243,6 +242,52 @@ def search_object(connect, _logger, ldap_filter, search_base, properties, type_o
             raise RuntimeError("Найдено больше одного объекта")
 
     return total_results
+
+
+def search_attribute_range(connect, _logger, dn: str, attribute: str) -> list:
+    """
+    Функция получения всех оставшихся значений из переменной состоящей из страниц
+
+    Args:
+        connect: Переменная с открытой сессией к СК
+        _logger: Переменная с логированием
+        dn: distinguishedName объекта
+        attribute: Название атрибута, для которого необходимо запросит оставшиеся значения из атрибута
+    """
+    all_range = []
+
+    attr_name = attribute.split(";")[0]
+    step = 1499  # Размер шага (шаг не может превышать размер правил DS)
+    start = int(attribute.split(';range=')[1].split('-')[1]) + 1  # От кого числа в массиве начинается
+    end = start + step  # До кого числа возвращаться
+
+    search_base = ldap.SCOPE_SUBTREE
+    ldap_filter = "(objectClass=*)"
+
+    while True:
+        attribute = f"{attr_name};range={start}-{end}"
+
+        _logger.debug(f"Get range: search_base: {search_base}, search_scope: {dn}, "
+                      f"ldap_filter: {ldap_filter}, properties: {[attribute]}")
+
+        res = connect.search_s(dn, search_base, ldap_filter, [attribute])[0][1]
+
+        am = [i for i in res.keys() if f'{attr_name};range=' in i][0]
+
+        if res[am]:
+            all_range += res[am]
+        else:
+            break
+
+        start, end = am.split(';range=')[1].split('-')
+
+        if '*' in end:
+            break
+        else:
+            start = int(end) + 1
+            end = int(end) + step + 1
+
+    return all_range
 
 
 def gen_filter_to_id(identity: str | DSDict | dict, type_object: DS_TYPE_OBJECT_SYSTEM = "object",
