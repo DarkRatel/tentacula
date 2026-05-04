@@ -2,8 +2,7 @@
 Функция создания эндпоинтов в виде готовых Присосок, с учётом всей специфики работы Тентакли
 """
 import json
-import contextlib
-from typing import Callable, Union, Type, Awaitable
+from typing import Callable, Union, Type
 
 import asyncio
 from pydantic import BaseModel
