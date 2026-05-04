@@ -15,7 +15,8 @@ class SpecData(BaseModel):
     json_: dict
 
 
-async def composition(url_: str, path_: str, json_: dict):
+def composition(url_: str, path_: str, json_: dict):
+    """Сочленение позволяет обратиться через Тентаклю"""
     logger.info("Original URL: %s", url_)
     logger.info("Original Path: %s", path_)
     logger.info("Original Data: %s", json_)
