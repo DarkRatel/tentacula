@@ -608,7 +608,7 @@ class DSHook:
             password_not_required=False,
         ))]
 
-        if isinstance(change_password_at_logon,bool):
+        if isinstance(change_password_at_logon, bool):
             dict_object['pwdLastSet'] = [gen_change_pwd_at_logon(change_password_at_logon)]
 
         if isinstance(account_expiration_date, bool):
