@@ -27,7 +27,7 @@ http {
     error_log  {{ folder_logs }}/nginx_error.log info;
 
     sendfile          on;
-    keepalive_timeout 30s; # Время, в течение которого уже завершённое HTTP-соединение остаётся открытым
+    keepalive_timeout 15s; # Время, в течение которого уже завершённое HTTP-соединение остаётся открытым
 
     server {
         listen      {{ port }} ssl;
@@ -53,9 +53,9 @@ http {
             proxy_set_header   Connection ""; # Переназначение заголовка Connection
 
             proxy_connect_timeout 10; # Время, за которое NGINX должен установить TCP-соединение (TLS, backend)
-            proxy_send_timeout    300s; # Время ожидания между отправкой частей запроса от NGINX
-            proxy_read_timeout    300s; # Максимальное время ожидания между байтами ответа
-            send_timeout          900s; # Время ожидания между отправкой байт ответа от NGINX → клиенту
+            proxy_send_timeout    32s; # Время ожидания между отправкой частей запроса от NGINX
+            proxy_read_timeout    32s; # Максимальное время ожидания между байтами ответа
+            send_timeout          10s; # Время ожидания между отправкой байт ответа от NGINX → клиенту
 
             proxy_set_header X-Forwarded-Proto $scheme;                    # Протокол подключения
             proxy_set_header Host              $host;                      # Имя хоста (сервера)
