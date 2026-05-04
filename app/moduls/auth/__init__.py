@@ -1,3 +1,6 @@
+"""
+Определяется функция, которая будет использоваться для проверки клиента на эндпоинте
+"""
 from app.systems.config import AppConfig
 
 __all__ = ["get_current_user"]

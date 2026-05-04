@@ -1,5 +1,5 @@
 import ldap
-
+from pydantic import BaseModel
 from fastapi import HTTPException, status, Request, Depends, Form
 
 from app.ds import DSHook
@@ -7,7 +7,16 @@ from app.systems.config import AppConfig
 from app.systems.logging import logger
 
 
+class Auth(BaseModel):
+    """Модель для получения аутентификационных данных клиента из запроса (логина и пароля)"""
+    tent_login: str
+    tent_pass: str
+
+
 def permission_user(permission: list[str]):
+    """Функция проверки прав клиента. Если пользователь состоит в группе из permission, доступ разрешён"""
+
+    # Получение данных пользователя для сравнения с permission
     async def checker(user=Depends(get_current_user)):
         try:
             with DSHook(login=user['tent_login'], password=user['tent_pass'],
@@ -30,9 +39,9 @@ def permission_user(permission: list[str]):
     return checker
 
 
-def get_current_user(request: Request, tent_login: str = Form(...), tent_pass: str = Form(...)) -> dict:
+def get_current_user(request: Request, data: Auth) -> dict:
     """
     Механизм получения логина и пароля из формы POST, для передачи в аутентификацию
     """
 
-    return {'tent_login': tent_login, 'tent_pass': tent_pass}
+    return {'tent_login': data.tent_login, 'tent_pass': data.tent_pass}

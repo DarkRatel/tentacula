@@ -4,6 +4,9 @@ from app.systems.logging import logger
 
 
 def permission_user(permission: list[str]):
+    """Функция проверки прав клиента. Если ID-клиента из сертификата есть в permission, то доступ предоставляется"""
+
+    # Получение данных пользователя для сравнения с permission
     async def checker(user=Depends(get_current_user)):
         if user not in permission:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
@@ -14,7 +17,7 @@ def permission_user(permission: list[str]):
 
 def get_current_user(request: Request) -> str:
     """
-    Механизм авторизации пользователя. Читает headers на наличие корректных атрибутов
+    Механизм авторизации пользователя. Читает headers на наличие полей сертификата клиента
     """
 
     subject = request.headers.get('x-client-subject')
