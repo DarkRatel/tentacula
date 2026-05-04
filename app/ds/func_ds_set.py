@@ -10,7 +10,7 @@ from datetime import datetime
 from .data import DS_TYPE_OBJECT_SYSTEM
 from .ds_dict import DSDict
 from .func_ds_get import search_object, gen_filter_to_id
-from .func_general import gen_uac, gen_gt, gen_change_pwd_at_logon, gen_account_exp_date
+from .func_ds_gen import gen_uac, gen_gt, gen_change_pwd_at_logon, gen_account_exp_date
 from .convertors_value import convert_value
 
 
