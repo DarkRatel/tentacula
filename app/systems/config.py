@@ -1,3 +1,6 @@
+"""
+Формирование внутренних переменных конфигурации приложения, которые допустимо запрашивать только через AppConfig
+"""
 import base64
 import os
 import json
@@ -111,7 +114,7 @@ def _read_json(config: ConfigParser, chapter: str, name: str, default=None) -> d
 
 class _AppConfig:
     def __init__(self):
-        """Функция со всеми переменными конфигурации полученными из env, .cfg или """
+        """Функция со всеми переменными конфигурации полученными из env или .cfg"""
         _config = ConfigParser()
         _config.read(CONFIG_PATH, encoding='utf-8-sig')
 
@@ -200,4 +203,5 @@ class _AppConfig:
                 raise AttributeError("Schedulers_ds requires APP__DB_ASYNC_URL and APP__SECRET_KEY")
 
 
+# Инициализация конфигурации
 AppConfig = _AppConfig()
