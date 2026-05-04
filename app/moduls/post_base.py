@@ -20,7 +20,7 @@ ReturnType = Union[int, str, float, list, tuple, dict, bool, None]
 
 
 def create_post(router: APIRouter,
-                endpoint: str, base_model: Type[BaseModel], func: Callable,
+                endpoint: str, func: Callable, base_model: Type[BaseModel] | None = None,
                 access: list[str] = None) -> None:
     """
     Функция генерации присосок.
@@ -48,7 +48,8 @@ def create_post(router: APIRouter,
     def create_handler():
         """Функция создания функции для эндпоинта"""
 
-        async def path_function_wrapper(request: Request, data: base_model, user=Depends(get_current_user(access))):
+        async def path_function_wrapper(request: Request, data: base_model = None,
+                                        user=Depends(get_current_user(access))):
             """Функция исполняющаяся внутри эндпоинта"""
 
             async def stream_result(s_func, s_param):
@@ -63,7 +64,10 @@ def create_post(router: APIRouter,
 
                 s_result = None
                 try:
-                    task = asyncio.create_task(asyncio.to_thread(s_func, **s_param))
+                    if s_param:
+                        task = asyncio.create_task(asyncio.to_thread(s_func, **s_param))
+                    else:
+                        task = asyncio.create_task(asyncio.to_thread(s_func))
 
                     # Если все BEFORE_ANSWERING будут потрачены, то будет отправлена точка
                     pause_active = BEFORE_ANSWERING
@@ -117,11 +121,13 @@ def create_post(router: APIRouter,
 
             # Основная функция исполнения эндпоинта
             try:
-                # Преобразование полученных значений
-                input_dada = data.model_dump()
-
-                # Вывод входных данных в логи
-                logger.info("Input data: %s", input_dada)
+                # Преобразование полученных значений если они были переданы
+                if data:
+                    input_dada = data.model_dump()
+                    # Вывод входных данных в логи
+                    logger.info("Input data: %s", input_dada)
+                else:
+                    input_dada = None
 
                 return StreamingResponse(
                     stream_result(func, input_dada),
