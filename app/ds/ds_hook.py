@@ -1,3 +1,6 @@
+"""
+Класс для обращения к СК
+"""
 import os
 import subprocess
 import logging
@@ -9,20 +12,28 @@ import ldap.sasl
 from .ds_dict import DSDict
 from .data import DataDSProperties, DS_TYPE_SCOPE, DS_TYPE_OBJECT, DS_GROUP_SCOPE, DS_GROUP_CATEGORY
 from .func_ds_get import search_object, gen_filter_to_id
-from .ds_function import search_root_dse
-from .convertors_value import UAC_FLAGS
-from .func_general import gen_uac, gen_gt, gen_change_pwd_at_logon, gen_account_exp_date
+from .ds_search_base import search_root_dse
+from .convertors_value import _UAC_FLAGS
+from .func_ds_gen import gen_uac, gen_gt, gen_change_pwd_at_logon, gen_account_exp_date
 from .func_ds_new import ds_new
 from .func_ds_set import ds_set
 from .func_ds_set_member import ds_set_member
 
-prefix_ldap = {
+# Префикс для типа LDAP подключения
+_PREFIX_LDAP = {
     636: 'ldaps',
     389: 'ldap'
 }
 
 
 def kinit_keytab(login: str, keytab: str):
+    """
+    Формирование Тикета для подключения по Kerberos
+
+    Args:
+        login: Логин из Keytab
+        keytab: Путь до файла Keytab
+    """
     # os.environ["KRB5CCNAME"] = cache
     # , cache: str = None
     os.environ["KRB5_CLIENT_KTNAME"] = keytab
@@ -37,8 +48,7 @@ def kinit_keytab(login: str, keytab: str):
 
 class DSHook:
     def __init__(self, host: str | list, login: str, password: str = None, keytab: str = None,
-                 port: int = 636, base: str = None,
-                 dry_run: bool = False, log_level: int = None) -> None:
+                 port: int = 636, base: str = None, dry_run: bool = False, log_level: int = None) -> None:
         """
         Класс создаёт сессию с DS, в рамках который будет исполнен запрос к каталогу
         (запрос описывается в рамках наследованных функций).
@@ -48,15 +58,12 @@ class DSHook:
         3. Если не указан "password" и "keytab", будет попытка использовать билеты Kerberos из текущей сессии
 
         Args:
-            login: Логин учётной записи, от имени который создаётся сессия в DS
-            (для билетов Kerberos (Keytab) требуется userPrincipalName с доменом заглавными буквами)
+            login: Логин учётной записи, от имени который создаётся сессия в DS (для билетов Kerberos (Keytab) требуется userPrincipalName с доменом заглавными буквами)
             password: Пароль от учётной записи
-            keytab: Путь до Keytab-файла Если требуется запросить keytab
-            host: Адрес контроллера домена (если в строке будут указаны хосты через запятую или передан список хостов,
-            хук будет последовательно подключается к следующему, если предыдущий будет недоступен)
+            keytab: Путь до Keytab-файла, если требуется запросить keytab
+            host: Адрес контроллера домена (если в строке будут указаны хосты через запятую или передан список хостов, хук последовательно подключается к каждому, пока не сможет установить соединение)
             port: Порт подключения: 389 или 636 (по умолчанию 636)
-            base: Область каталога. Если не указать, при открытии сессии у DS будет запрошена область работы
-            (при определении зоны поиска автоматически исключает DomainDnsZones, ForestDnsZones)
+            base: Область каталога. Если не указать, при открытии сессии у DS будет запрошена область работы (при определении зоны поиска автоматически исключается DomainDnsZones, ForestDnsZones). Допустимо переназначать переменную base после определения класса
             dry_run: Формирование запроса, без внесения изменений в DS
             log_level: Переопределение глубины логирования
         """
@@ -70,7 +77,7 @@ class DSHook:
         self.base = base
         self._host = host.split(',') if isinstance(host, str) else host
         self._port = port
-        if not prefix_ldap.get(port):
+        if not _PREFIX_LDAP.get(port):
             raise ValueError("Only 636 or 389 ports are allowed")
 
         # Создание уникального имени для логов
@@ -84,10 +91,13 @@ class DSHook:
 
         connect_line = None
 
+        # Поиск доступного хоста
         for host in self._host:
             try:
-                connect_line = f"{prefix_ldap[self._port]}://{host}:{self._port}"
+                # Формирование строки подключения
+                connect_line = f"{_PREFIX_LDAP[self._port]}://{host}:{self._port}"
 
+                # Параметры установки соединения с СК
                 ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_ALLOW)
                 self._connect = ldap.initialize(connect_line)
 
@@ -98,7 +108,7 @@ class DSHook:
 
                 self._logger.info(f"Run LDAP Connect: {connect_line}, login: {self._login}")
 
-                # Запрос выпуска билетов на основе Keytab
+                # Запрос выпуска билетов на основе Keytab, если ожидается использование keytab
                 if self._keytab:
                     kinit_keytab(login=self._login, keytab=self._keytab)
 
@@ -132,16 +142,17 @@ class DSHook:
         Функция запроса любого объекта из каталога.
 
         Args:
-            identity: Аргумент для поиска только одного объекта в каталоге (distinguishedName, objectGUID, objectSid, sAMAccountName (для user, group или computer) или словарь объекта DS (DSDict)). Не совместим с ldap_filter.
-            ldap_filter: Аргумент для поиска по LDAP-фильтру. Не совместим с identity.
-            properties: Запрос дополнительных атрибутов. Расширенные атрибуты: Enabled, PasswordNeverExpires, AccountNotDelegated (на основе userAccountControl), GroupScope, GroupCategory (на основе groupType), ChangePasswordAtLogon (на основе pwdLastSet).
+            identity: Аргумент для поиска только одного объекта в каталоге (distinguishedName, objectGUID, objectSid, sAMAccountName (для user, group или computer) или словарь объекта DS (DSDict)). Не совместим с ldap_filter. Возвращает ошибку, если не будет получен один объект
+            ldap_filter: Аргумент для поиска по LDAP-фильтру. Не совместим с identity
+            properties: Запрос дополнительных атрибутов. '*' возвращает все заполненные атрибуты. Расширенные атрибуты: Enabled, PasswordNeverExpires, AccountNotDelegated (на основе userAccountControl), GroupScope (на основе groupType), GroupCategory (на основе groupType), ChangePasswordAtLogon (на основе pwdLastSet), FlagsUAC (флаги из атрибута userAccountControl), FlagsGT (флаги из атрибута groupType)
             search_scope: Глубина поиска
-            type_object: К фильтру поиска добавляется фильтр типа объекта ("object", "user", "group", "computer" или "contact")
+            type_object: К фильтру поиска добавляется фильтр типа объекта  ("object", "user", "group", "computer" или "contact") (по умолчанию)
 
         Returns:
             Список объектов из DS
         """
 
+        # Если передан список атрибутов, он добавляется с учётом стандартных атрибутов для типа объекта
         if properties:
             if isinstance(properties, str):
                 properties = [properties]
@@ -153,7 +164,7 @@ class DSHook:
                 properties = list(set([i.casefold() for i in properties]))
                 properties += [i.casefold() for i in DataDSProperties[type_object.upper()].value
                                if i.casefold() not in properties]
-
+        # Запрашиваются только стандартные атрибуты
         else:
             properties = list(set([i.casefold() for i in DataDSProperties[type_object.upper()].value]))
 
@@ -193,9 +204,9 @@ class DSHook:
         Функция запроса пользователя из каталога.
 
         Args:
-            identity: Аргумент для поиска только одного объекта в каталоге (distinguishedName, objectGUID, objectSid, sAMAccountName или словарь объекта DS (DSDict)). Не совместим с ldap_filter.
-            ldap_filter: Аргумент для поиска по LDAP-фильтру. Не совместим с identity.
-            properties: Запрос дополнительных атрибутов. Расширенные атрибуты: Enabled, PasswordNeverExpires, AccountNotDelegated (на основе userAccountControl), ChangePasswordAtLogon (на основе pwdLastSet).
+            identity: Аргумент для поиска только одного объекта в каталоге (distinguishedName, objectGUID, objectSid, sAMAccountName или словарь объекта DS (DSDict)). Не совместим с ldap_filter. Возвращает ошибку, если не будет получен один объект
+            ldap_filter: Аргумент для поиска по LDAP-фильтру. Не совместим с identity
+            properties: Запрос дополнительных атрибутов. '*' возвращает все заполненные атрибуты. Расширенные атрибуты: Enabled, PasswordNeverExpires, AccountNotDelegated (на основе userAccountControl), ChangePasswordAtLogon (на основе pwdLastSet), FlagsUAC (флаги из атрибута userAccountControl)
             search_scope: Глубина поиска
 
         Returns:
@@ -212,9 +223,9 @@ class DSHook:
         Функция запроса компьютера из каталога DS.
 
         Args:
-            identity: Аргумент для поиска только одного объекта в каталоге (distinguishedName, objectGUID, objectSid, sAMAccountName или словарь объекта DS (DSDict)). Не совместим с ldap_filter.
-            ldap_filter: Аргумент для поиска по LDAP-фильтру. Не совместим с identity.
-            properties: Запрос дополнительных атрибутов. Расширенные атрибуты: Enabled, PasswordNeverExpires, AccountNotDelegated (на основе userAccountControl), ChangePasswordAtLogon (на основе pwdLastSet).
+            identity: Аргумент для поиска только одного объекта в каталоге (distinguishedName, objectGUID, objectSid, sAMAccountName или словарь объекта DS (DSDict)). Не совместим с ldap_filter. Возвращает ошибку, если не будет получен один объект
+            ldap_filter: Аргумент для поиска по LDAP-фильтру. Не совместим с identity
+            properties: Запрос дополнительных атрибутов. '*' возвращает все заполненные атрибуты. Расширенные атрибуты: GroupScope (на основе groupType), GroupCategory (на основе groupType), FlagsGT (флаги из атрибута groupType)
             search_scope: Глубина поиска
 
         Returns:
@@ -231,9 +242,9 @@ class DSHook:
         Функция запроса компьютера из каталога DS.
 
         Args:
-            identity: Аргумент для поиска только одного объекта в каталоге (distinguishedName, objectGUID, objectSid, sAMAccountName или словарь объекта DS (DSDict)). Не совместим с ldap_filter.
-            ldap_filter: Аргумент для поиска по LDAP-фильтру. Не совместим с identity.
-            properties: Запрос дополнительных атрибутов. Расширенные атрибуты: Enabled, PasswordNeverExpires, AccountNotDelegated (на основе userAccountControl), ChangePasswordAtLogon (на основе pwdLastSet).
+            identity: Аргумент для поиска только одного объекта в каталоге (distinguishedName, objectGUID, objectSid, sAMAccountName (для user, group или computer) или словарь объекта DS (DSDict)). Не совместим с ldap_filter. Возвращает ошибку, если не будет получен один объект
+            ldap_filter: Аргумент для поиска по LDAP-фильтру. Не совместим с identity
+            properties: Запрос дополнительных атрибутов. '*' возвращает все заполненные атрибуты. Расширенные атрибуты: Enabled, PasswordNeverExpires, AccountNotDelegated (на основе userAccountControl), ChangePasswordAtLogon (на основе pwdLastSet), FlagsUAC (флаги из атрибута userAccountControl)
             search_scope: Глубина поиска
 
         Returns:
@@ -250,9 +261,9 @@ class DSHook:
         Функция запроса контактов из каталога DS.
 
         Args:
-            identity: Аргумент для поиска только одного объекта в каталоге (distinguishedName, objectGUID, objectSid или словарь объекта DS (DSDict)). Не совместим с ldap_filter.
-            ldap_filter: Аргумент для поиска по LDAP-фильтру. Не совместим с identity.
-            properties: Запрос дополнительных атрибутов. Расширенные атрибуты: GroupScope, GroupCategory (на основе groupType)
+            identity: Аргумент для поиска только одного объекта в каталоге (distinguishedName, objectGUID или словарь объекта DS (DSDict)). Не совместим с ldap_filter. Возвращает ошибку, если не будет получен один объект
+            ldap_filter: Аргумент для поиска по LDAP-фильтру. Не совместим с identity
+            properties: Запрос дополнительных атрибутов. '*' возвращает все заполненные атрибуты
             search_scope: Глубина поиска
 
         Returns:
@@ -264,6 +275,7 @@ class DSHook:
     def get_group_member(self, identity: str | dict | DSDict) -> list[DSDict]:
         """
         Функция получения всех членов группы, с дополнительными атрибутами.
+        Если передан DSDict группы, поиск группы не будет производиться.
 
         Args:
             identity: Аргумент принимающий уникальные атрибуты группы для идентификации (distinguishedName, objectGUID, objectSid, sAMAccountName или словарь объекта DS (DSDict)).
@@ -304,11 +316,11 @@ class DSHook:
         Функция изменения атрибутов объекта в DS.
 
         Args:
-            identity: Аргумент принимающий уникальные атрибуты объекта для идентификации (distinguishedName, objectGUID, objectSid или словарь объекта DS (DSDict))
+            identity: Аргумент принимающий уникальные атрибуты объекта для идентификации (distinguishedName, objectGUID, objectSid, sAMAccountName (для user, group или computer) или словарь объекта DS (DSDict))
             remove: Удалить одно из значений в атрибуте
             add: Добавить значение в атрибут
             replace: Полная замена всех значений
-            clear: Очистка в атрибуте
+            clear: Очистка атрибута
             display_name: Заполнение или изменение атрибута "displayName"
             description: Заполнение или изменение атрибута "description"
         """
@@ -332,11 +344,11 @@ class DSHook:
         Функция изменения атрибутов пользователя в DS.
 
         Args:
-            identity: Аргумент принимающий уникальные атрибуты группы для идентификации  (distinguishedName, objectGUID, objectSid, sAMAccountName или словарь объекта DS (DSDict)).
+            identity: Аргумент принимающий уникальные атрибуты группы для идентификации (distinguishedName, objectGUID, objectSid, sAMAccountName или словарь объекта DS (DSDict)).
             remove: Удалить одно из значений в атрибуте.
             add: Добавить значение в атрибут.
             replace: Полная замена всех значений.
-            clear: Очистка в атрибуте.
+            clear: Очистка атрибута.
             display_name: Заполнение или изменение атрибута "displayName".
             description: Заполнение или изменение атрибута "description".
             sam_account_name: Заполнение или изменение атрибута "sAMAccountName".
@@ -345,28 +357,32 @@ class DSHook:
             password_never_expires: Включение или отключение бессрочного пароля.
             account_not_delegated: Включение или отключение запрета на делегирование.
             change_password_at_logon: Включение или отключение требования сменить пароль при входе.
-            account_expiration_date: Указание или отключение срока действия пользователя.
+            account_expiration_date: Указание даты или отключение срока действия пользователя.
         """
-
-        if user_principal_name and '@' not in user_principal_name:
-            raise RuntimeError("В userprincipalname домен должен быть указан через @")
 
         special = DSDict()
 
         if display_name: special.update({'displayName': display_name})
         if description: special.update({'description': description})
         if sam_account_name: special.update({'sAMAccountName': sam_account_name})
-        if user_principal_name: special.update({'userPrincipalName': user_principal_name})
         if account_expiration_date is not None: special.update({'accountExpires': account_expiration_date})
         if change_password_at_logon is not None: special.update({'pwdLastSet': change_password_at_logon})
 
-        if [True for i in [enabled, password_never_expires, account_not_delegated] if i is not None]:
+        if user_principal_name:
+            if '@' not in user_principal_name:
+                raise ValueError("В userPrincipalName домен должен быть указан через @")
+            special.update({'userPrincipalName': user_principal_name})
+
+        # Проверка, что хотя бы один ключ отвечающий за изменение
+        # атрибута userAccountControl является bool'евым (имеет значение)
+        if [True for i in [enabled, password_never_expires, account_not_delegated] if isinstance(i, bool)]:
             special['userAccountControl'] = DSDict()
 
-            if enabled is not None: special['userAccountControl']['Enabled'] = enabled
-            if password_never_expires is not None:
+            if isinstance(enabled, bool):
+                special['userAccountControl']['Enabled'] = enabled
+            if isinstance(password_never_expires, bool):
                 special['userAccountControl']['PasswordNeverExpires'] = password_never_expires
-            if account_not_delegated is not None:
+            if isinstance(account_not_delegated, bool):
                 special['userAccountControl']['AccountNotDelegated'] = account_not_delegated
 
         ds_set(connect=self._connect, type_object="user", identity=identity, base=self.base, dry_run=self.dry_run,
@@ -385,7 +401,7 @@ class DSHook:
             remove: Удалить одно из значений в атрибуте.
             add: Добавить значение в атрибут.
             replace: Полная замена всех значений.
-            clear: Очистка в атрибуте.
+            clear: Очистка атрибута.
             display_name: Заполнение или изменение атрибута "displayName".
             description: Заполнение или изменение атрибута "description".
             sam_account_name: Заполнение или изменение атрибута "sAMAccountName".
@@ -399,11 +415,11 @@ class DSHook:
         if description: special.update({'description': description})
         if sam_account_name: special.update({'sAMAccountName': sam_account_name})
 
-        if [True for i in [group_scope, group_category] if i is not None]:
+        if [True for i in [group_scope, group_category] if isinstance(i, bool)]:
             special['groupType'] = DSDict()
 
-            if group_scope is not None: special['groupType']['GroupScope'] = group_scope
-            if group_category is not None: special['groupType']['GroupCategory'] = group_category
+            if isinstance(group_scope, bool): special['groupType']['GroupScope'] = group_scope
+            if isinstance(group_category, bool): special['groupType']['GroupCategory'] = group_category
 
         ds_set(connect=self._connect, type_object="group", identity=identity, base=self.base, dry_run=self.dry_run,
                remove=remove, add=add, replace=replace, clear=clear, special=special, _logger=self._logger)
@@ -420,7 +436,7 @@ class DSHook:
             remove: Удалить одно из значений в атрибуте.
             add: Добавить значение в атрибут.
             replace: Полная замена всех значений.
-            clear: Очистка в атрибуте.
+            clear: Очистка атрибута.
             display_name: Заполнение или изменение атрибута "displayName".
             description: Заполнение или изменение атрибута "description".
         """
@@ -445,7 +461,7 @@ class DSHook:
             remove: Удалить одно из значений в атрибуте
             add: Добавить значение в атрибут
             replace: Полная замена всех значений
-            clear: Очистка в атрибуте
+            clear: Очистка атрибута
             display_name: Заполнение или изменение атрибута "displayName"
             description: Заполнение или изменение атрибута "description"
         """
@@ -509,6 +525,7 @@ class DSHook:
     def move_object(self, identity: str | dict | DSDict, target_path: str) -> None:
         """
         Функция перемещения объектов между Организационными юнитами (изменяется distinguishedName).
+        Оригинальный CN в distinguishedName сохраняется
 
         Args:
             identity: Аргумент принимающий уникальные атрибуты пользователя для идентификации (distinguishedName, objectGUID, objectSid или словарь объекта DS (DSDict)).
@@ -519,7 +536,7 @@ class DSHook:
             _logger=self._logger,
             ldap_filter=gen_filter_to_id(identity, type_object='object'),
             search_base=self.base,
-            properties=['cn', 'distinguishedName'],
+            properties=['distinguishedName'],
             type_object='object',
             only_one=True,
         )[0]
@@ -527,6 +544,7 @@ class DSHook:
         self._logger.info(f"Move object: DN: {result['distinguishedName']}, new path: {target_path}")
 
         if not self.dry_run:
+            # Сохраняется оригинальный CN из строки distinguishedName
             self._connect.rename_s(result['distinguishedName'],
                                    ldap.dn.explode_dn(result['distinguishedName'])[0], target_path)
         else:
@@ -551,8 +569,7 @@ class DSHook:
         )[0]
 
         self._logger.info(f"Rename object: DN: {result['distinguishedName']}, new name: {new_name}, "
-                          f"old name: {result['name']}, "
-                          f"old cn: {result['cn']}")
+                          f"old name: {result['name']}, old cn: {result['cn']}")
 
         if not self.dry_run:
             self._connect.rename_s(result['distinguishedName'], f"CN={new_name}")
@@ -584,17 +601,17 @@ class DSHook:
         dict_object = DSDict()
 
         dict_object['userAccountControl'] = [str(gen_uac(
-            uac=UAC_FLAGS['NORMAL_ACCOUNT'],
+            uac=_UAC_FLAGS['NORMAL_ACCOUNT'],
             enabled=enabled,
             password_never_expires=password_never_expires,
             account_not_delegated=account_not_delegated,
             password_not_required=False,
         ))]
 
-        if change_password_at_logon is not None:
+        if isinstance(change_password_at_logon,bool):
             dict_object['pwdLastSet'] = [gen_change_pwd_at_logon(change_password_at_logon)]
 
-        if account_expiration_date is not None:
+        if isinstance(account_expiration_date, bool):
             dict_object['accountExpires'] = [gen_account_exp_date(account_expiration_date)]
 
         if user_principal_name:
