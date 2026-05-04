@@ -1,17 +1,18 @@
 import inspect
 
-from fastapi import status, Depends
+from fastapi import APIRouter
 from fastapi.routing import APIRoute
-from fastapi.responses import Response, JSONResponse
 from pydantic import BaseModel
 
 from app.main import app
+from app.moduls.post_base import create_post
 from app.systems.config import AppConfig
-from app.moduls.auth import get_current_user
 
-@app.post("/", response_class=Response)
-async def sucker_root_get(user = Depends(get_current_user(AppConfig.SECURITY__LIST_OF_PERMITTED))) -> JSONResponse:
-    """Корневой сайт приложения, возвращающий все опубликованные эндпоинты"""
+router_root = APIRouter()
+
+
+def root():
+    """Функция root подключения к Тентакуле, которая возвращает список всех опубликованных Щупалец"""
     routes_info = []
     for route in app.routes:
         if isinstance(route, APIRoute):
@@ -37,4 +38,8 @@ async def sucker_root_get(user = Depends(get_current_user(AppConfig.SECURITY__LI
                 "params": params
             })
 
-    return JSONResponse(content=routes_info, status_code=status.HTTP_200_OK)
+    return routes_info
+
+
+create_post(endpoint="/", func=root, access=AppConfig.SECURITY__LIST_OF_PERMITTED,
+            base_model=None, router=router_root)

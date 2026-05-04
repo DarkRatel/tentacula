@@ -100,7 +100,9 @@ async def system_middleware(request: Request, call_next):
 
 
 # Импорт первой страницы приложения
-importlib.import_module("app.sites.root")
+from app.sites.root import router_root
+
+app.include_router(router_root)
 
 # Импорт пользовательских щупалец, если включено
 if AppConfig.SUCKERS__ENABLED:
