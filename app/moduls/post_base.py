@@ -1,6 +1,8 @@
+"""
+Функция создания эндпоинтов в виде готовых Присосок, с учётом всей специфики работы Тентакли
+"""
 import json
 from typing import Callable, Union, Type, Awaitable
-from datetime import datetime, date
 
 import asyncio
 from pydantic import BaseModel
@@ -9,16 +11,22 @@ from fastapi.responses import JSONResponse, StreamingResponse
 
 from app.moduls.auth import get_current_user
 from app.systems.logging import logger
-from app.ds import DSDict
+from app.moduls.json_encoder import json_encoder
 
 STEP = 1500  # Общая переменная шага для списков, которые будут возвращены
 BEFORE_ANSWERING = 15  # Пауза в секундах, перед тем, как эндпоинт передаст пустой байт для активности в сессии
+# Допустимые типы данных, которые могут быть возвращены эндпоинтом
 ReturnType = Union[int, str, float, list, tuple, dict, bool, None]
 
 
 async def stream_result(func, param):
+    """
+    Функция стриминга ответа клиенту.
+    Стримится один большой JSON, в рамках которого и получен ли успешный ответ в рамках запроса
+    """
     logger.info("======Function======")
     yield "{"
+    # Отправляется для отправки 0 байт, пока на эндпоинте идёт обработка
     yield '"waiting": "'
 
     result = None
@@ -41,12 +49,13 @@ async def stream_result(func, param):
         result = e
         error = True
 
-    yield '", '
+    # Конец блока waiting и передача данных была ли зафиксирована ошибка
+    yield f'", error": {str(error).lower()}, '
 
-    yield f'"error": {str(error).lower()}, '
-
+    # Открытие блока для результата исполнения запроса на эндпоинте
     yield '"details": '
 
+    # Если будет список с элементами больше чем STEP, то он будет отправляться по частям
     if isinstance(result, list):
         yield "["  # начало массива
 
@@ -68,30 +77,9 @@ async def stream_result(func, param):
     logger.info("======End======")
 
 
-def json_encoder(obj):
-    """Функция конвертации значений в подходящий для JSON формат"""
-    if obj is None or isinstance(obj, (str, int, float, bool)):
-        return obj
-
-    if isinstance(obj, dict):
-        return {k: json_encoder(v) for k, v in obj.items()}
-
-    if isinstance(obj, (list, tuple, set)):
-        return [json_encoder(v) for v in obj]
-
-    if isinstance(obj, (datetime, date)):
-        return obj.isoformat()
-
-    if isinstance(obj, DSDict):
-        return obj.original_dict()
-
-    raise TypeError(repr(obj) + " is not JSON serializable")
-
-
 def create_post(router: APIRouter,
-                endpoint: str, base_model: Type[BaseModel],
-                func: Callable[..., Awaitable[ReturnType]],
-                access: list[str] = None):
+                endpoint: str, base_model: Type[BaseModel], func: Callable[..., Awaitable[ReturnType]],
+                access: list[str] = None) -> None:
     """
     Функция генерации присосок.
     Если присоска предполагает возращение списка, он будет возращён частями, если элементов больше 1500 (по умолчанию).
@@ -101,8 +89,7 @@ def create_post(router: APIRouter,
         base_model: BaseModel входных данных
         func: Функция для исполнения
         router: APIRouter
-        access: Список ID-клиентов, которые могут быть воспользоваться эндпоинтом
-         (используется если включена аутентификация)
+        access: Список ID-клиентов, которые могут быть воспользоваться эндпоинтом (используется если включена аутентификация)
     """
 
     if '/' == endpoint:
@@ -120,7 +107,9 @@ def create_post(router: APIRouter,
         """Функция создания функции для эндпоинта"""
 
         async def path_function_wrapper(request: Request, data: base_model, user=Depends(get_current_user(access))):
+            """Функция исполняющаяся внутри эндпоинта"""
             try:
+                # Преобразование полученных значений
                 input_dada = data.model_dump()
 
                 # Вывод входных данных в логи
