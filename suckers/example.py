@@ -6,15 +6,17 @@ from app.systems.logging import logger  # Функция логирования
 
 
 # Класс основанный на BaseModel, описывающий ожидаемые значения в запросе
+# Не требуется, если не нужны входные значения
 class SpecData(BaseModel):
     # Например, ключи типа int
     terms_1: int
     terms_2: int
 
 
-# Функция, которая будет исполнена на сервере. Требуется, чтобы она была типа async
-async def addition(terms_1: int, terms_2: int):
+# Функция, которая будет исполнена на сервере. Требуется функция обычного типа
+def addition(terms_1: int, terms_2: int):
     # Для фиксации данных в логах требуется использовать "logger"
+    # и передавать переменные стандартным спецификатором %*
     logger.info("Hello world!")
 
     # Использование переменных, тип которых, по факту, был определён ещё в BaseModel
@@ -24,5 +26,7 @@ async def addition(terms_1: int, terms_2: int):
     return terms_1 + terms_2
 
 
-# Функция создающая эндпоинт на основе имени эндпоинта, функции и ожидаемых значений
-create_post(endpoint="addition", base_model=SpecData, func=addition, router=router_sucker)
+# Функция создающая эндпоинт на основе имени эндпоинта, функции и ожидаемых значений.
+# Если включен держим работы проверки клиента, требуется указать в ключе access соответствующий идентификатор клиента
+# Если входные данные не требуется, base_model должен быть равен None
+create_post(endpoint="addition", base_model=SpecData, func=addition, router=router_sucker, access=[])
