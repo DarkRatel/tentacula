@@ -12,7 +12,7 @@ from sqlalchemy import Column, Integer, String, DateTime, JSON, select, func, de
 from app.sds import SDSHook
 from app.systems.config import AppConfig
 from app.systems.logging import logger, s_id_ctx_var
-from app.systems.database import get_db, Base
+from app.systems.database import Base
 from app.moduls.json_encoder import json_encoder
 from app.systems.database import AsyncSessionLocal
 from app.main import scheduler
