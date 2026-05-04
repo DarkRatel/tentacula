@@ -20,7 +20,7 @@ class SpecData(BaseModel):
     type_object: DS_TYPE_OBJECT = "object"
 
 
-async def get_object(login: str, password: str, host: str, base: str = None, identity: str | dict = None,
+def get_object(login: str, password: str, host: str, base: str = None, identity: str | dict = None,
                      ldap_filter: str = None, properties: str | list | tuple = None,
                      search_scope: DS_TYPE_SCOPE = "subtree", type_object: DS_TYPE_OBJECT = "object",
                      log_level: int = None) -> list[DSDict]:

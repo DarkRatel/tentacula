@@ -16,7 +16,7 @@ class SpecData(BaseModel):
     identity: str | dict
 
 
-async def set_account_unlock(login: str, password: str, host: str, identity: str | dict, base: str = None,
+def set_account_unlock(login: str, password: str, host: str, identity: str | dict, base: str = None,
                              log_level: int = None):
     with DSHook(login=login, password=password, host=host, port=636, base=base, log_level=log_level) as ds:
         ds.set_account_unlock(

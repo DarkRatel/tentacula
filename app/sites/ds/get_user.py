@@ -19,7 +19,7 @@ class SpecData(BaseModel):
     search_scope: DS_TYPE_SCOPE = "subtree"
 
 
-async def get_user(login: str, password: str, host: str, base: str = None, identity: str | dict = None,
+def get_user(login: str, password: str, host: str, base: str = None, identity: str | dict = None,
                    ldap_filter: str = None, properties: str | list | tuple = None,
                    search_scope: DS_TYPE_SCOPE = "subtree", log_level: int = None) -> list[DSDict]:
     with DSHook(login=login, password=password, host=host, port=636, base=base, log_level=log_level) as ds:

@@ -18,7 +18,7 @@ class SpecData(BaseModel):
     other_attributes: dict[str, list] = None
 
 
-async def new_contact(login: str, password: str, host: str, path: str, name: str,
+def new_contact(login: str, password: str, host: str, path: str, name: str,
                       other_attributes: dict[str, list] = None, base: str = None, log_level: int = None):
     with DSHook(login=login, password=password, host=host, port=636, base=base, log_level=log_level) as ds:
         ds.new_contact(
