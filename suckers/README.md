@@ -76,14 +76,19 @@ create_post(endpoint="addition", base_model=SpecData, func=addition, router=rout
 Функция конвертации ISO в datetime:
 
 ```
-def datetime_parser(dct):
-    for k, v in dct.items():
-        if isinstance(v, str):
-            try:
-                dct[k] = datetime.fromisoformat(v)
-            except ValueError:
-                pass
-    return dct
+def datetime_parser(value):
+    if isinstance(value, str):
+        try:
+            return datetime.fromisoformat(value) if '-' in value else value
+        except ValueError:
+            return value
+    if isinstance(value, list):
+        return [datetime_parser(i) for i in value]
+    if isinstance(value, dict):
+        for k, v in value.items():
+            value[k] = datetime_parser(v)
+        return value
+    return value
 ```
 
 Конвертация JSON в формат данных Python: `response.json(object_hook=datetime_parser)`
