@@ -1,3 +1,4 @@
+import logging
 from typing import AsyncGenerator
 
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
@@ -5,8 +6,11 @@ from sqlalchemy.ext.declarative import declarative_base
 
 from app.systems.config import AppConfig
 
-# Создаем асинхронный движок базы данных
-engine = create_async_engine(AppConfig.APP__DB_ASYNC_URL, echo=True, future=True)
+# Игнорирование событий от sqlalchemy, связанных с запросом в БД, так как в них нет подходящих данных
+logging.getLogger("sqlalchemy.engine.Engine").setLevel(logging.WARNING)
+
+# Создание асинхронного движка базы данных
+engine = create_async_engine(AppConfig.APP__DB_ASYNC_URL, echo=False, future=True)
 
 # Фабрика сессий
 AsyncSessionLocal = async_sessionmaker(
