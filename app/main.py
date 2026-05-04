@@ -12,8 +12,16 @@ from app.systems.logging import logger, s_id_ctx_var, setup_logging
 # Настройка root'ового logging, для перехвата всех данных выводимых в логгер
 setup_logging()
 
+# Если в конфигурации есть запуск SCHEDULERS, то инициализируется приложение
 if any([AppConfig.SCHEDULERS__ENABLED, AppConfig.SCHEDULERS_DS__ENABLED]):
-    scheduler = AsyncIOScheduler()
+    scheduler = AsyncIOScheduler(
+        timezone="UTC",
+        job_defaults={
+            "misfire_grace_time": 15,  # Разрешение запускать задачу, если прошло больше 15 секунд с планового запуска
+            "coalesce": True,  # Если есть накопленные задания, исполнять только 1
+            "max_instances": 1,  # Запускать параллельно только 1 копию задания
+        },
+    )
 
 
 @asynccontextmanager
