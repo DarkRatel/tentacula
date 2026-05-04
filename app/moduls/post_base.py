@@ -33,6 +33,7 @@ async def stream_result(func, param):
     try:
         task = asyncio.create_task(func(**param))
 
+        # Если все BEFORE_ANSWERING будут потрачены, то будет отправлен пустой байт клиенту
         pause_active = BEFORE_ANSWERING
         while not task.done():
             await asyncio.sleep(1)
