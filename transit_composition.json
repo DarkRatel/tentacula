@@ -1,0 +1,14 @@
+{
+  "EXAMPLE": {
+    "url_": [
+      "https://tent.local"
+    ],
+    "SSL_CA_CERTS": "/app/tentacula/certs/ca.crt",
+    "SSL_CERTFILE": "/app/tentacula/certs/server.crt",
+    "SSL_KEYFILE": "/app/tentacula/certs/server.key",
+    "json_": {
+      "login": "new_login",
+      "password": "123456"
+    }
+  }
+}

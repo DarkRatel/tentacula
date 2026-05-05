@@ -1,0 +1,12 @@
+{
+  "EXAMPLE": {
+    "login": "example\\Administrator",
+    "password": "123456Qaz",
+    "host": "1.1.1.1",
+    "port": 636,
+    "url": "https://localhost:443/ds",
+    "cert_root": "/app/tentacula/certs/ca.crt",
+    "cert_file": "/app/tentacula/certs/client.crt",
+    "cert_key": "/app/tentacula/certs/client.key"
+  }
+}
