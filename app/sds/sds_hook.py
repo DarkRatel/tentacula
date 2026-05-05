@@ -3,6 +3,7 @@ import json
 import logging
 import time
 import base64
+from copy import copy
 from datetime import datetime
 
 import httpx, ssl
@@ -122,7 +123,7 @@ def request_db(_connect, _logger, db_table: str, timeout: int, type_query, param
                 f" VALUES ('waiting', '{type_query}', '{param_conn}', '{param_query}') RETURNING id"
             )
             query_id = cur.fetchone()[0]
-            logging.info(f"query_id = {query_id}")
+            _logger.info(f"Task query_id = {query_id}")
 
     time.sleep(10)
 
@@ -342,16 +343,19 @@ class SDSHook:
         """
         # base единственный параметр, который может быть переназначен при работе хука,
         # поэтому для безопасности он переназначается при запросах
-        self._param_conn['base'] = self.base
+        if self._param_conn.get('base') != self.base:
+            self._param_conn['base'] = self.base
 
         # Прямое обращение к СК
         if self._type_conn == self.CONN_DS:
             return getattr(self._connect_ds, type_query)(**param_query)
 
+        # copy используется, чтобы не изменилось оригинальное значение при формирвоания строки подходящей для логов
         self._logger.info(
-            f"Endpoint: {type_query}, "
-            f"Conn Params: {mask_protect_data(self._param_conn, hide_pass=True)}, "
-            f"Query Params: {mask_protect_data(param_query, hide_pass=True)}"
+            f"Endpoint: %s, Conn Params: %s, Query Params: %s",
+            type_query,
+            mask_protect_data(copy(self._param_conn), hide_pass=True),
+            mask_protect_data(copy(param_query), hide_pass=True)
         )
 
         # Обращение к СК через Тентаклю
@@ -361,8 +365,7 @@ class SDSHook:
                 try:
                     url = f'{url}/{type_query}'
 
-                    auth_data = [f"Run URL Connect: {url}",
-                                 f"LDAP Host: {self._host}, Port: {self._port}, Login: {self._login}"]
+                    auth_data = [f"Run URL Connect: {url}"]
 
                     # Если был указан сертификат для подключения, его данные будут добавлены в логи
                     if self._cert_file:
@@ -392,6 +395,7 @@ class SDSHook:
             else:
                 raise TimeoutError(f"Can't contact HTTP servers")
 
+            # Проверка полученных результатов
             try:
                 response.raise_for_status()
                 result = response.json()
