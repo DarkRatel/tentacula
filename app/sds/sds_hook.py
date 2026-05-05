@@ -125,11 +125,13 @@ def request_db(_connect, _logger, db_table: str, timeout: int, type_query, param
             query_id = cur.fetchone()[0]
             _logger.info(f"Task query_id = {query_id}")
 
+    # Перед попытками проверки ответа небольшая пауза
     time.sleep(10)
 
     # Проверка получения ответа
     with _connect:
         with _connect.cursor() as cur:
+            # timeout делится на 10, чтобы равномерно повторно отравлять запросы каждые 10 секунд
             for _ in range(int(timeout / 10)):
                 cur.execute(
                     f"SELECT status, result FROM {db_table}"
@@ -149,7 +151,7 @@ def request_db(_connect, _logger, db_table: str, timeout: int, type_query, param
                         return [DSDict(i) for i in result[1]]
                     return result[1]
 
-                time.sleep(int(timeout / 10))
+                time.sleep(10)
             else:
                 raise TimeoutError("Данные не появились за 5 минут")
 
@@ -161,7 +163,7 @@ class SDSHook:
     CONN_DB = 3
 
     def __init__(self, login: str = None, password: str = None, host: str = None, port: int = 636, base: str = None,
-                 dry_run: bool = False, log_level: int = None, public_key: str = None, timeout: int = 300,
+                 dry_run: bool = False, log_level: int = None, public_key: str = None, timeout: int = 180,
                  db_login: str = None, db_password: str = None, db_host: str = None, db_port: int = 5432,
                  database: str = None, url: str | list = None, cert_root: str = None, cert_file: str = None,
                  cert_key: str = None, tent_login: str = None, tent_pass: str = None, airflow_conn_id: str = None,
