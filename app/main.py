@@ -1,4 +1,5 @@
 import os
+import sys
 import importlib
 
 from fastapi import FastAPI, Request
@@ -128,6 +129,32 @@ if AppConfig.COMPOSITION__ENABLED:
     from app.sites.composition import router_composition
 
     app.include_router(router_composition)
+
+# Импорт пользовательских шедуллеров
+if AppConfig.SCHEDULERS__ENABLED:
+    import importlib.util
+    from pathlib import Path
+
+    shed_dir = Path(AppConfig.SCHEDULERS__FOLDER)
+
+    for module_path in shed_dir.glob("*.py"):
+        if module_path.name == "__init__.py":
+            continue
+
+        module_name = f"app.scheduler.{module_path.stem}"
+
+        spec = importlib.util.spec_from_file_location(module_name, module_path)
+
+        if spec is None or spec.loader is None:
+            raise ImportError(f"Cannot load module from {module_path}")
+
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[module_name] = module
+        spec.loader.exec_module(module)
+
+        register_jobs = getattr(module, "register_jobs", None)
+        if callable(register_jobs):
+            register_jobs(scheduler)
 
 # Импорт шедуллера для работы с DS, если включен
 if AppConfig.SCHEDULERS_DS__ENABLED:
