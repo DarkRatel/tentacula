@@ -12,7 +12,7 @@ router_root = APIRouter()
 
 
 def root():
-    """Функция root подключения к Тентакуле, которая возвращает список всех опубликованных Щупалец"""
+    """Функция root подключения к Тентакуле, которая возвращает список всех опубликованных Присосок"""
     routes_info = []
     for route in app.routes:
         if isinstance(route, APIRoute):

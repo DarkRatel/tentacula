@@ -1,7 +1,7 @@
 # Минимальные зависимости
 from pydantic import BaseModel  # Функция для объявления структуры ожидаемых значений
 from app.moduls.post_base import create_post  # Функция создания эндпоинта типа POST
-from app.sites.suckers import router_sucker  # API для ветки щупалец
+from app.sites.suckers import router_sucker  # API для ветки Присосок
 from app.systems.logging import logger  # Функция логирования
 
 

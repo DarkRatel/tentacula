@@ -10,7 +10,7 @@
 
 - Минимальный набор подключенных библиотек;
 - BaseModel описывающий ожидаемые значения в теле POST;
-- Пользовательская функция, исполняющаяся на сервере щупальцы;
+- Пользовательская функция, исполняющаяся на сервере Тентакли;
 - Системная функция создающая присоску типа POST.
 
 ## Пример присоски
@@ -19,7 +19,7 @@
 # Минимальные зависимости
 from pydantic import BaseModel  # Функция для объявления структуры ожидаемых значений
 from app.moduls.post_base import create_post  # Функция создания эндпоинта типа POST
-from app.sites.suckers import router_sucker  # API для ветки щупалец
+from app.sites.suckers import router_sucker  # API для ветки Присосок
 from app.systems.logging import logger  # Функция логирования
 
 

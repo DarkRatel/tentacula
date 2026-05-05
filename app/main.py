@@ -105,13 +105,13 @@ from app.sites.root import router_root
 
 app.include_router(router_root)
 
-# Импорт пользовательских щупалец, если включено
+# Импорт пользовательских Присосок, если включено
 if AppConfig.SUCKERS__ENABLED:
     from app.sites.suckers import router_sucker
 
     app.include_router(router_sucker)
 
-# Импорт щупалец связанных с DS, если включено
+# Импорт Присосок связанных с DS, если включено
 if AppConfig.SUCKERS_DS__ENABLED:
     from app.sites.ds import router_ds
 
