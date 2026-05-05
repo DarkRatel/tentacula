@@ -19,39 +19,63 @@ from app.ds import DSHook, DSDict
 from app.ds import DS_TYPE_SCOPE, DS_TYPE_OBJECT, DS_GROUP_SCOPE, DS_GROUP_CATEGORY
 
 
-def datetime_parser(dct):
-    for k, v in dct.items():
-        if isinstance(v, list):
-            if isinstance(v, str):
-                try:
-                    dct[k] = datetime.fromisoformat(v)
-                except ValueError:
-                    pass
+def mask_protect_data(value: dict, hide_pass: bool = True) -> dict:
+    """Функция преобразования данных и маскирования значений у ключей с упоминанием слова password"""
+    for k, v in value.items():
         if isinstance(v, str):
-            try:
-                dct[k] = datetime.fromisoformat(v)
-            except ValueError:
-                pass
-    return dct
+            if hide_pass and 'password' in k.lower():
+                value.update({k: '***'})
+        elif isinstance(v, dict):
+            value.update({k: datetime_to_iso(v)})
+        else:
+            value.update({k: v})
+
+    return value
 
 
-def datetime_to_iso(dct):
-    for k, v in dct.items():
-        if isinstance(v, list):
-            if isinstance(v, datetime):
-                try:
-                    dct[k] = datetime.isoformat(v)
-                except ValueError:
-                    pass
-        if isinstance(v, datetime):
-            try:
-                dct[k] = datetime.isoformat(v)
-            except ValueError:
-                pass
-    return dct
+def datetime_parser(value):
+    """Функция конвертации даты полученной в виде строки в datetime"""
+    if isinstance(value, str):
+        try:
+            # Если в строке есть прочерк, предполагается, что строка может быть датой в формате ISO,
+            # поэтому производится попытка конвертации.
+            # Если получена ошибка конвертации, возвращается оригинальное значение
+            return datetime.fromisoformat(value) if '-' in value else value
+        except ValueError:
+            return value
+    if isinstance(value, list):
+        return [datetime_parser(i) for i in value]
+    if isinstance(value, dict):
+        for k, v in value.items():
+            value[k] = datetime_parser(v)
+        return value
+    return value
+
+
+def datetime_to_iso(value):
+    """Функция конвертации datetime в строку в формате ISO"""
+    if isinstance(value, datetime):
+        try:
+            return datetime.isoformat(value)
+        except ValueError:
+            return value
+    elif isinstance(value, list):
+        return [datetime_to_iso(i) for i in value]
+    elif isinstance(value, dict):
+        for k, v in value.items():
+            value[k] = datetime_to_iso(v)
+        return value
+    return value
 
 
 def encode_param(_public_key, param: dict):
+    """
+    Функция шифрования открытым ключом словаря. Актуально для обращений через таблицу заданий и Шедуллер
+
+    Args:
+        _public_key: Функция открытого ключа
+        param: Шифруемый словарь
+    """
     param = json.dumps(param).encode("utf-8")
 
     aes_key = AESGCM.generate_key(bit_length=256)
@@ -75,36 +99,47 @@ def encode_param(_public_key, param: dict):
     ).decode('utf-8')
 
 
-def request_db(_connect, db_table: str, timeout: int, type_query, param_conn, param_query):
+def request_db(_connect, _logger, db_table: str, timeout: int, type_query, param_conn, param_query):
+    """
+    Функция формирования задания для таблицы и получения ответа.
+    Актуально для обращений через таблицу заданий и Шедуллер
+
+    Args:
+        _connect: Открытая сессия с БД
+        _logger: Функция логирования
+        db_table: Название таблицы для отправки заданий
+        timeout: Максимальное время ожидания ответа в таблице
+        type_query: Тип запроса к СК
+        param_conn: Параметры подключения к СК
+        param_query: Параметры запроса
+    """
+
+    # Отправка запроса в таблицу
     with _connect:
         with _connect.cursor() as cur:
             cur.execute(
-                f"""
-                INSERT INTO {db_table} (status, type_query, param_conn, param_query)
-                VALUES ('waiting', '{type_query}', '{param_conn}', '{param_query}')
-                RETURNING id
-                """
+                f"INSERT INTO {db_table} (status, type_query, param_conn, param_query)"
+                f" VALUES ('waiting', '{type_query}', '{param_conn}', '{param_query}') RETURNING id"
             )
             query_id = cur.fetchone()[0]
-            print(query_id)
+            logging.info(f"query_id = {query_id}")
 
     time.sleep(10)
 
+    # Проверка получения ответа
     with _connect:
         with _connect.cursor() as cur:
             for _ in range(int(timeout / 10)):
                 cur.execute(
-                    f"""
-                    SELECT status, result
-                    FROM {db_table}
-                    WHERE id = {query_id} AND (status = 'complete' OR status = 'error')
-                    """
+                    f"SELECT status, result FROM {db_table}"
+                    f" WHERE id = {query_id} AND (status = 'complete' OR status = 'error')"
                 )
 
                 result = cur.fetchone()
 
                 if isinstance(result, tuple):
                     cur.execute(f"DELETE FROM {db_table} WHERE id = {query_id}")
+                    cur.connection.commit()
 
                     if result[0] == 'error':
                         raise RuntimeError(result[1])
@@ -119,6 +154,7 @@ def request_db(_connect, db_table: str, timeout: int, type_query, param_conn, pa
 
 
 class SDSHook:
+    # Указатели какой тип подключения будет использоваться
     CONN_DS = 1
     CONN_TENT = 2
     CONN_DB = 3
@@ -176,6 +212,7 @@ class SDSHook:
             port = port or _config.port
             base = base or _config.schema
 
+            # Дополнительные комментарии запрашиваются из Extra
             if _config.get_extra():
                 _data = json.loads(_config.get_extra())
                 url = url or _data.get("url", None)
@@ -188,6 +225,7 @@ class SDSHook:
                 log_level = log_level or _data.get("log_level", None)
                 timeout = timeout or _data.get("timeout", None)
 
+                # Получение подключения к БД, если необходимо использовать
                 db_conn_id = _data.get("db_conn_id", None)
                 if db_conn_id:
                     _config = BaseHook.get_connection(db_conn_id)
@@ -196,6 +234,13 @@ class SDSHook:
                     db_host = db_host or _config.host
                     db_port = db_port or _config.port
                     database = database or _config.schema
+
+                # Получение подключения к Тентакле
+                tent_conn_id = _data.get("tent_conn_id", None)
+                if tent_conn_id:
+                    _config = BaseHook.get_connection(tent_conn_id)
+                    tent_login = tent_login or _config.login
+                    tent_pass = tent_pass or _config.password
 
         self._login = login
         self._password = password
@@ -212,9 +257,11 @@ class SDSHook:
         self._cert_root = cert_root
         self._cert_file = cert_file
         self._cert_key = cert_key
-        self._base = base
+        self.base = base
         self._dry_run = dry_run
         self._log_level = log_level
+        self._tent_login = tent_login
+        self._tent_pass = tent_pass
 
         # Создание уникального имени для логов
         self._logger = logging.getLogger(self.__class__.__name__)
@@ -224,18 +271,18 @@ class SDSHook:
 
         self._param_conn = {k: v for k, v in
                             {'login': self._login, 'password': self._password, 'host': self._host, 'port': self._port,
-                             'base': self._base, 'dry_run': self._dry_run, 'log_level': self._log_level}.items() if v}
+                             'base': self.base, 'dry_run': self._dry_run, 'log_level': self._log_level,
+                             'tent_login': self._tent_login, 'tent_pass': self._tent_pass}.items() if v}
         self._type_conn = None
 
         ### Выбор способа подключения
         # Если атрибуты, подходят для эндпоинтов Tentacula
-        if all([self._url, self._login, self._password, self._host, self._cert_root, self._cert_file, self._cert_key]):
+        if all([self._url, self._login, self._password, self._host]):
             self._type_conn = self.CONN_TENT
         # Если атрибуты, подходят для создания заданий в БД
-        elif all([self._public_key, self._timeout, self._db_login, self._db_password, self._db_host, self._db_port,
-                  self._database]):
+        elif all([self._public_key, self._db_login, self._db_password, self._db_host, self._db_port, self._database]):
             self._type_conn = self.CONN_DB
-            self._db_table = 'ds_tasker'
+            self._db_table = 'tentacula_ds_tasker'
             self._public_key = base64.b64decode(public_key.encode('utf-8'))
             self._public_key = serialization.load_pem_public_key(self._public_key)
         # Если указаны атрибуты, подходят для прямого доступа
@@ -250,11 +297,17 @@ class SDSHook:
         if self._type_conn == self.CONN_DS:
             self._connect_ds = DSHook(**self._param_conn).__enter__()
         elif self._type_conn == self.CONN_TENT:
-            ssl_ctx = ssl.create_default_context(ssl.Purpose.SERVER_AUTH, cafile=self._cert_root)
-            ssl_ctx.load_cert_chain(certfile=self._cert_file, keyfile=self._cert_key)
-            transport = httpx.HTTPTransport(verify=ssl_ctx)
-            timeout = httpx.Timeout(connect=15, read=900, write=900, pool=900)
+            # Если не переданы параметры для HTTP запроса сопровождающего сертификатом,
+            # будет попытка открыть соединение без них
+            if all([self._cert_root, self._cert_file, self._cert_key]):
+                ssl_ctx = ssl.create_default_context(ssl.Purpose.SERVER_AUTH, cafile=self._cert_root)
+                ssl_ctx.load_cert_chain(certfile=self._cert_file, keyfile=self._cert_key)
+                transport = httpx.HTTPTransport(verify=ssl_ctx)
+            else:
+                transport = httpx.HTTPTransport()
+            timeout = httpx.Timeout(connect=10, read=32, write=32, pool=10)
             self._connect_tent = httpx.Client(transport=transport, timeout=timeout)
+
         elif self._type_conn == self.CONN_DB:
             self._connect_db = psycopg2.connect(
                 host=self._db_host,
@@ -280,35 +333,57 @@ class SDSHook:
             raise ValueError("Не удалось определить тип подключения")
 
     def query(self, type_query, param_query):
+        """
+        Функция отправки запросов через целевой метод
+
+        Args:
+            type_query: Тип операции
+            param_query: Параметры операции
+        """
+        # base единственный параметр, который может быть переназначен при работе хука,
+        # поэтому для безопасности он переназначается при запросах
+        self._param_conn['base'] = self.base
+
+        # Прямое обращение к СК
         if self._type_conn == self.CONN_DS:
             return getattr(self._connect_ds, type_query)(**param_query)
+
+        self._logger.info(
+            f"Endpoint: {type_query}, "
+            f"Conn Params: {mask_protect_data(self._param_conn, hide_pass=True)}, "
+            f"Query Params: {mask_protect_data(param_query, hide_pass=True)}"
+        )
+
+        # Обращение к СК через Тентаклю
         if self._type_conn == self.CONN_TENT:
+            # Перебор полученного списка Тентаклей, для поиска доступной
             for url in self._url:
                 try:
                     url = f'{url}/{type_query}'
 
-                    with open(self._cert_file, "rb") as f:
-                        cert_data = f.read()
+                    auth_data = [f"Run URL Connect: {url}",
+                                 f"LDAP Host: {self._host}, Port: {self._port}, Login: {self._login}"]
 
-                    cert = x509.load_pem_x509_certificate(cert_data, default_backend())
-                    cn = cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
+                    # Если был указан сертификат для подключения, его данные будут добавлены в логи
+                    if self._cert_file:
+                        with open(self._cert_file, "rb") as f:
+                            cert_data = f.read()
 
-                    self._logger.info(f"Run URL Connect: {url}"
-                                      f", LDAP Host: {self._host}, Port: {self._port}, Login: {self._login}"
-                                      f", Client cert Subject: 'CN={cn}', Client cert Serial: {cert.serial_number}")
+                        cert = x509.load_pem_x509_certificate(cert_data, default_backend())
+                        cn = cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
 
-                    for_send = {}
-                    for k, v in param_query.items():
-                        if isinstance(v, str) and 'password' in k.lower():
-                            for_send.update({k: '***'})
-                        elif isinstance(v, dict):
-                            for_send.update({k: datetime_to_iso(v)})
-                        else:
-                            for_send.update({k: v})
+                        auth_data.append(f"Client cert Subject: 'CN={cn}', Client cert Serial: {cert.serial_number}")
 
-                    self._logger.info(f"Endpoint: {type_query}, Params: {for_send}, Base: {self._base}")
+                    # Если был указан логин для авторизации на Тентакле
+                    if self._tent_login:
+                        auth_data.append(f"Tent login: {self._tent_login}")
 
-                    response = self._connect_tent.post(url, json={**self._param_conn, **param_query})
+                    self._logger.info(', '.join(auth_data))
+
+                    response = self._connect_tent.post(url, json={
+                        **mask_protect_data(self._param_conn, hide_pass=False),
+                        **mask_protect_data(param_query, hide_pass=False)
+                    })
 
                     break
                 except httpx.ConnectError as e:
@@ -331,11 +406,14 @@ class SDSHook:
             else:
                 return result['details']
 
+        # Обращение к СК через Шедуллер
         if self._type_conn == self.CONN_DB:
             return datetime_parser(
                 request_db(
-                    _connect=self._connect_db, db_table=self._db_table, timeout=self._timeout, type_query=type_query,
-                    param_conn=self._param_conn, param_query=encode_param(self._public_key, param_query)
+                    _connect=self._connect_db, _logger=self._logger, db_table=self._db_table,
+                    timeout=self._timeout, type_query=type_query,
+                    param_conn=encode_param(self._public_key, mask_protect_data(self._param_conn, hide_pass=False)),
+                    param_query=encode_param(self._public_key, mask_protect_data(param_query, hide_pass=False))
                 )
             )
         else:
@@ -350,11 +428,11 @@ class SDSHook:
         Функция запроса любого объекта из каталога.
 
         Args:
-            identity: Аргумент для поиска только одного объекта в каталоге (distinguishedName, objectGUID, objectSid, sAMAccountName (для user, group или computer) или словарь объекта DS (DSDict)). Не совместим с ldap_filter.
-            ldap_filter: Аргумент для поиска по LDAP-фильтру. Не совместим с identity.
-            properties: Запрос дополнительных атрибутов. Расширенные атрибуты: Enabled, PasswordNeverExpires, AccountNotDelegated (на основе userAccountControl), GroupScope, GroupCategory (на основе groupType), ChangePasswordAtLogon (на основе pwdLastSet).
+            identity: Аргумент для поиска только одного объекта в каталоге (distinguishedName, objectGUID, objectSid, sAMAccountName (для user, group или computer) или словарь объекта DS (DSDict)). Не совместим с ldap_filter. Возвращает ошибку, если не будет получен один объект
+            ldap_filter: Аргумент для поиска по LDAP-фильтру. Не совместим с identity
+            properties: Запрос дополнительных атрибутов. '*' возвращает все заполненные атрибуты. Расширенные атрибуты: Enabled, PasswordNeverExpires, AccountNotDelegated (на основе userAccountControl), GroupScope (на основе groupType), GroupCategory (на основе groupType), ChangePasswordAtLogon (на основе pwdLastSet), FlagsUAC (флаги из атрибута userAccountControl), FlagsGT (флаги из атрибута groupType)
             search_scope: Глубина поиска
-            type_object: К фильтру поиска добавляется фильтр типа объекта ("object", "user", "group", "computer" или "contact")
+            type_object: К фильтру поиска добавляется фильтр типа объекта  ("object", "user", "group", "computer" или "contact") (по умолчанию)
 
         Returns:
             Список объектов из DS
@@ -374,9 +452,9 @@ class SDSHook:
         Функция запроса пользователя из каталога.
 
         Args:
-            identity: Аргумент для поиска только одного объекта в каталоге (distinguishedName, objectGUID, objectSid, sAMAccountName или словарь объекта DS (DSDict)). Не совместим с ldap_filter.
-            ldap_filter: Аргумент для поиска по LDAP-фильтру. Не совместим с identity.
-            properties: Запрос дополнительных атрибутов. Расширенные атрибуты: Enabled, PasswordNeverExpires, AccountNotDelegated (на основе userAccountControl), ChangePasswordAtLogon (на основе pwdLastSet).
+            identity: Аргумент для поиска только одного объекта в каталоге (distinguishedName, objectGUID, objectSid, sAMAccountName или словарь объекта DS (DSDict)). Не совместим с ldap_filter. Возвращает ошибку, если не будет получен один объект
+            ldap_filter: Аргумент для поиска по LDAP-фильтру. Не совместим с identity
+            properties: Запрос дополнительных атрибутов. '*' возвращает все заполненные атрибуты. Расширенные атрибуты: Enabled, PasswordNeverExpires, AccountNotDelegated (на основе userAccountControl), ChangePasswordAtLogon (на основе pwdLastSet), FlagsUAC (флаги из атрибута userAccountControl)
             search_scope: Глубина поиска
 
         Returns:
@@ -397,9 +475,9 @@ class SDSHook:
         Функция запроса компьютера из каталога DS.
 
         Args:
-            identity: Аргумент для поиска только одного объекта в каталоге (distinguishedName, objectGUID, objectSid, sAMAccountName или словарь объекта DS (DSDict)). Не совместим с ldap_filter.
-            ldap_filter: Аргумент для поиска по LDAP-фильтру. Не совместим с identity.
-            properties: Запрос дополнительных атрибутов. Расширенные атрибуты: Enabled, PasswordNeverExpires, AccountNotDelegated (на основе userAccountControl), ChangePasswordAtLogon (на основе pwdLastSet).
+            identity: Аргумент для поиска только одного объекта в каталоге (distinguishedName, objectGUID, objectSid, sAMAccountName или словарь объекта DS (DSDict)). Не совместим с ldap_filter. Возвращает ошибку, если не будет получен один объект
+            ldap_filter: Аргумент для поиска по LDAP-фильтру. Не совместим с identity
+            properties: Запрос дополнительных атрибутов. '*' возвращает все заполненные атрибуты. Расширенные атрибуты: GroupScope (на основе groupType), GroupCategory (на основе groupType), FlagsGT (флаги из атрибута groupType)
             search_scope: Глубина поиска
 
         Returns:
@@ -420,9 +498,9 @@ class SDSHook:
         Функция запроса компьютера из каталога DS.
 
         Args:
-            identity: Аргумент для поиска только одного объекта в каталоге (distinguishedName, objectGUID, objectSid, sAMAccountName или словарь объекта DS (DSDict)). Не совместим с ldap_filter.
-            ldap_filter: Аргумент для поиска по LDAP-фильтру. Не совместим с identity.
-            properties: Запрос дополнительных атрибутов. Расширенные атрибуты: Enabled, PasswordNeverExpires, AccountNotDelegated (на основе userAccountControl), ChangePasswordAtLogon (на основе pwdLastSet).
+            identity: Аргумент для поиска только одного объекта в каталоге (distinguishedName, objectGUID, objectSid, sAMAccountName (для user, group или computer) или словарь объекта DS (DSDict)). Не совместим с ldap_filter. Возвращает ошибку, если не будет получен один объект
+            ldap_filter: Аргумент для поиска по LDAP-фильтру. Не совместим с identity
+            properties: Запрос дополнительных атрибутов. '*' возвращает все заполненные атрибуты. Расширенные атрибуты: Enabled, PasswordNeverExpires, AccountNotDelegated (на основе userAccountControl), ChangePasswordAtLogon (на основе pwdLastSet), FlagsUAC (флаги из атрибута userAccountControl)
             search_scope: Глубина поиска
 
         Returns:
@@ -443,9 +521,9 @@ class SDSHook:
         Функция запроса контактов из каталога DS.
 
         Args:
-            identity: Аргумент для поиска только одного объекта в каталоге (distinguishedName, objectGUID, objectSid или словарь объекта DS (DSDict)). Не совместим с ldap_filter.
-            ldap_filter: Аргумент для поиска по LDAP-фильтру. Не совместим с identity.
-            properties: Запрос дополнительных атрибутов. Расширенные атрибуты: GroupScope, GroupCategory (на основе groupType)
+            identity: Аргумент для поиска только одного объекта в каталоге (distinguishedName, objectGUID или словарь объекта DS (DSDict)). Не совместим с ldap_filter. Возвращает ошибку, если не будет получен один объект
+            ldap_filter: Аргумент для поиска по LDAP-фильтру. Не совместим с identity
+            properties: Запрос дополнительных атрибутов. '*' возвращает все заполненные атрибуты
             search_scope: Глубина поиска
 
         Returns:
@@ -461,6 +539,7 @@ class SDSHook:
     def get_group_member(self, identity: str | dict | DSDict) -> list[DSDict]:
         """
         Функция получения всех членов группы, с дополнительными атрибутами.
+        Если передан DSDict группы, поиск группы не будет производиться.
 
         Args:
             identity: Аргумент принимающий уникальные атрибуты группы для идентификации (distinguishedName, objectGUID, objectSid, sAMAccountName или словарь объекта DS (DSDict)).
@@ -482,11 +561,11 @@ class SDSHook:
         Функция изменения атрибутов объекта в DS.
 
         Args:
-            identity: Аргумент принимающий уникальные атрибуты объекта для идентификации (distinguishedName, objectGUID, objectSid или словарь объекта DS (DSDict))
+            identity: Аргумент принимающий уникальные атрибуты объекта для идентификации (distinguishedName, objectGUID, objectSid, sAMAccountName (для user, group или computer) или словарь объекта DS (DSDict))
             remove: Удалить одно из значений в атрибуте
             add: Добавить значение в атрибут
             replace: Полная замена всех значений
-            clear: Очистка в атрибуте
+            clear: Очистка атрибута
             display_name: Заполнение или изменение атрибута "displayName"
             description: Заполнение или изменение атрибута "description"
         """
@@ -504,16 +583,16 @@ class SDSHook:
                  display_name: str = None, description: str = None, sam_account_name: str = None,
                  user_principal_name: str = None, enabled: bool = None, password_never_expires: bool = None,
                  account_not_delegated: bool = None, change_password_at_logon: bool = None,
-                 account_expiration_date: bool | datetime = None) -> None:
+                 account_expiration_date: bool | datetime | str = None) -> None:
         """
         Функция изменения атрибутов пользователя в DS.
 
         Args:
-            identity: Аргумент принимающий уникальные атрибуты группы для идентификации  (distinguishedName, objectGUID, objectSid, sAMAccountName или словарь объекта DS (DSDict)).
+            identity: Аргумент принимающий уникальные атрибуты группы для идентификации (distinguishedName, objectGUID, objectSid, sAMAccountName или словарь объекта DS (DSDict)).
             remove: Удалить одно из значений в атрибуте.
             add: Добавить значение в атрибут.
             replace: Полная замена всех значений.
-            clear: Очистка в атрибуте.
+            clear: Очистка атрибута.
             display_name: Заполнение или изменение атрибута "displayName".
             description: Заполнение или изменение атрибута "description".
             sam_account_name: Заполнение или изменение атрибута "sAMAccountName".
@@ -522,7 +601,7 @@ class SDSHook:
             password_never_expires: Включение или отключение бессрочного пароля.
             account_not_delegated: Включение или отключение запрета на делегирование.
             change_password_at_logon: Включение или отключение требования сменить пароль при входе.
-            account_expiration_date: Указание или отключение срока действия пользователя.
+            account_expiration_date: Указание даты или отключение срока действия пользователя.
         """
 
         type_query = 'set_user'
@@ -550,7 +629,7 @@ class SDSHook:
             remove: Удалить одно из значений в атрибуте.
             add: Добавить значение в атрибут.
             replace: Полная замена всех значений.
-            clear: Очистка в атрибуте.
+            clear: Очистка атрибута.
             display_name: Заполнение или изменение атрибута "displayName".
             description: Заполнение или изменение атрибута "description".
             sam_account_name: Заполнение или изменение атрибута "sAMAccountName".
@@ -578,7 +657,7 @@ class SDSHook:
             remove: Удалить одно из значений в атрибуте.
             add: Добавить значение в атрибут.
             replace: Полная замена всех значений.
-            clear: Очистка в атрибуте.
+            clear: Очистка атрибута.
             display_name: Заполнение или изменение атрибута "displayName".
             description: Заполнение или изменение атрибута "description".
         """
@@ -602,7 +681,7 @@ class SDSHook:
             remove: Удалить одно из значений в атрибуте
             add: Добавить значение в атрибут
             replace: Полная замена всех значений
-            clear: Очистка в атрибуте
+            clear: Очистка атрибута
             display_name: Заполнение или изменение атрибута "displayName"
             description: Заполнение или изменение атрибута "description"
         """
@@ -674,6 +753,7 @@ class SDSHook:
     def move_object(self, identity: str | dict | DSDict, target_path: str) -> None:
         """
         Функция перемещения объектов между Организационными юнитами (изменяется distinguishedName).
+        Оригинальный CN в distinguishedName сохраняется
 
         Args:
             identity: Аргумент принимающий уникальные атрибуты пользователя для идентификации (distinguishedName, objectGUID, objectSid или словарь объекта DS (DSDict)).
@@ -702,7 +782,8 @@ class SDSHook:
     def new_user(self, path: str, name: str, sam_account_name: str, account_password: str, display_name: str = None,
                  user_principal_name: str = None, enabled: bool = None, password_never_expires: bool = None,
                  account_not_delegated: bool = None, change_password_at_logon: bool = None,
-                 account_expiration_date: bool | datetime = None, other_attributes: dict[str, list] = None) -> None:
+                 account_expiration_date: bool | datetime | str = None,
+                 other_attributes: dict[str, list] = None) -> None:
         """
             Функция создания объекта типа пользователь.
 
