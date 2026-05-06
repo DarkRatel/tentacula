@@ -159,11 +159,11 @@ class _AppConfig:
 
             self.WEB__PORT = _read_any(config=_config, chapter='web', name='PORT', type_=int)
 
-            self.WEB__SSL_ENABLED = _read_bool(config=_config, chapter='web', name='SSL_ENABLED', default=False)
-            if self.WEB__SSL_ENABLED:
-                self.WEB__SSL_CERTFILE = _read_any(config=_config, chapter='web', name='SSL_CERTFILE')
-                self.WEB__SSL_KEYFILE = _read_any(config=_config, chapter='web', name='SSL_KEYFILE')
-                self.WEB__SSL_CA_CERTS = _read_any(config=_config, chapter='web', name='SSL_CA_CERTS')
+            self.WEB__HTTP_BLOCK = _read_bool(config=_config, chapter='web', name='HTTP_BLOCK', default=False)
+
+            self.WEB__SSL_CERTFILE = _read_any(config=_config, chapter='web', name='SSL_CERTFILE', default=False)
+            self.WEB__SSL_KEYFILE = _read_any(config=_config, chapter='web', name='SSL_KEYFILE', default=False)
+            self.WEB__SSL_CA_CERTS = _read_any(config=_config, chapter='web', name='SSL_CA_CERTS', default=False)
 
         # [composition]
         self.COMPOSITION__ENABLED = _read_bool(config=_config, chapter='composition', name='ENABLED', default=False)

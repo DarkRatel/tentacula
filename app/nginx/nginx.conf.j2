@@ -1,3 +1,4 @@
+{% if http_block %}
 worker_processes  auto;
 
 events {
@@ -5,6 +6,8 @@ events {
 }
 
 http {
+    default_type  application/octet-stream;
+{% endif %}
     # Формат обычных логов
     # $time_iso8601 - Дата и время в формате ISO 8601
     # $request_id - Уникальный идентификатор запроса
@@ -20,18 +23,18 @@ http {
                          ' "$http_referer" "$http_user_agent"'
                          ' Cert serial: "$ssl_client_serial" Cert subject: "$ssl_client_s_dn"';
 
-    default_type  application/octet-stream;
-
     # Логи HTTP-запросов
-    access_log {{ folder_logs }}/nginx_access.log tentacula;
-    error_log  {{ folder_logs }}/nginx_error.log info;
+    access_log {{ logs_folder }}/nginx_access.log tentacula;
+    error_log  {{ logs_folder }}/nginx_error.log info;
 
     sendfile          on;
     keepalive_timeout 15s; # Время, в течение которого уже завершённое HTTP-соединение остаётся открытым
 
     server {
-        listen      {{ port }} ssl;
         server_name _;
+
+        {% if ssl_enabled %}
+        listen      {{ port }} ssl;
 
         # Cертификат сервера
         ssl_certificate     {{ ssl_certfile }};
@@ -44,6 +47,9 @@ http {
         # Включение проверки клиентского сертификата
         ssl_client_certificate {{ ssl_ca_certs }};
         ssl_verify_client      on;
+        {% else %}
+        listen      {{ port }};
+        {% endif %}
 
         # Прокисрование всех запросов на uvicorn
         location / {
@@ -66,4 +72,6 @@ http {
             proxy_set_header X-Client-Serial   $ssl_client_serial;         # Уникальный код сертификата клиента
         }
     }
+{% if http_block %}
 }
+{% endif %}

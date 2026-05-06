@@ -37,21 +37,20 @@ async def lifespan(app: FastAPI):
     if AppConfig.WEB__NGINX_FILE:
         logger.info(f"Generate NGINX Conf: {AppConfig.WEB__NGINX_FILE}")
 
-        if AppConfig.WEB__SSL_ENABLED:
-            with open(f"{os.getcwd()}/app/nginx/nginx_ssl.conf.j2", "r") as f:
-                template = Template(f.read()).render(
-                    folder_logs=AppConfig.WEB__LOGS_FOLDER,
-                    port=AppConfig.WEB__PORT,
-                    ssl_certfile=AppConfig.WEB__SSL_CERTFILE,
-                    ssl_keyfile=AppConfig.WEB__SSL_KEYFILE,
-                    ssl_ca_certs=AppConfig.WEB__SSL_CA_CERTS,
-                )
-        else:
-            with open(f"{os.getcwd()}/app/nginx/nginx_nossl.conf.j2", "r") as f:
-                template = Template(f.read()).render(
-                    folder_logs=AppConfig.WEB__LOGS_FOLDER,
-                    port=AppConfig.WEB__PORT,
-                )
+        # Включение SSL, если переданы все три сертификата
+        ssl_enabled = all([AppConfig.WEB__SSL_CERTFILE, AppConfig.WEB__SSL_KEYFILE, AppConfig.WEB__SSL_CA_CERTS])
+        logger.info(f"SSL Enabled: {ssl_enabled}")
+
+        with open(f"{os.getcwd()}/app/nginx/nginx.conf.j2", "r") as f:
+            template = Template(f.read()).render(
+                logs_folder=AppConfig.WEB__LOGS_FOLDER,
+                port=AppConfig.WEB__PORT,
+                http_block=AppConfig.WEB__HTTP_BLOCK,
+                ssl_enabled=ssl_enabled,
+                ssl_certfile=AppConfig.WEB__SSL_CERTFILE,
+                ssl_keyfile=AppConfig.WEB__SSL_KEYFILE,
+                ssl_ca_certs=AppConfig.WEB__SSL_CA_CERTS,
+            )
 
         with open(AppConfig.WEB__NGINX_FILE, "w") as f:
             f.write(template)
