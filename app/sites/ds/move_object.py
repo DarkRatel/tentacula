@@ -18,7 +18,7 @@ class SpecData(BaseModel):
 
 
 def move_object(login: str, password: str, host: str, identity: str | dict, target_path: str, base: str = None,
-                      log_level: int = None):
+                log_level: int = None):
     with DSHook(login=login, password=password, host=host, port=636, base=base, log_level=log_level) as ds:
         ds.move_object(
             identity=identity,

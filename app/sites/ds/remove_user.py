@@ -17,7 +17,7 @@ class SpecData(BaseModel):
 
 
 def remove_user(login: str, password: str, host: str, identity: str | dict, base: str = None,
-                      log_level: int = None):
+                log_level: int = None):
     with DSHook(login=login, password=password, host=host, port=636, base=base, log_level=log_level) as ds:
         ds.remove_user(
             identity=identity
