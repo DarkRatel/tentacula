@@ -275,7 +275,7 @@ class SDSHook:
         self._param_conn = {k: v for k, v in
                             {'login': self._login, 'password': self._password, 'host': self._host, 'port': self._port,
                              'base': self.base, 'dry_run': self._dry_run, 'log_level': self._log_level,
-                             'tent_login': self._tent_login, 'tent_pass': self._tent_pass}.items() if v}
+                             'tent_login': self._tent_login, 'tent_pass': self._tent_pass}.items() if v is not None}
         self._type_conn = None
 
         ### Выбор способа подключения
@@ -446,7 +446,8 @@ class SDSHook:
 
         type_query = 'get_object'
         param_query = {k: v for k, v in {'identity': identity, 'ldap_filter': ldap_filter, 'properties': properties,
-                                         'search_scope': search_scope, 'type_object': type_object}.items() if v}
+                                         'search_scope': search_scope, 'type_object': type_object}.items()
+                       if v is not None}
 
         return self.query(type_query, param_query)
 
@@ -469,7 +470,7 @@ class SDSHook:
 
         type_query = 'get_user'
         param_query = {k: v for k, v in {'identity': identity, 'ldap_filter': ldap_filter, 'properties': properties,
-                                         'search_scope': search_scope}.items() if v}
+                                         'search_scope': search_scope}.items() if v is not None}
 
         return self.query(type_query, param_query)
 
@@ -492,7 +493,7 @@ class SDSHook:
 
         type_query = 'get_group'
         param_query = {k: v for k, v in {'identity': identity, 'ldap_filter': ldap_filter, 'properties': properties,
-                                         'search_scope': search_scope}.items() if v}
+                                         'search_scope': search_scope}.items() if v is not None}
 
         return self.query(type_query, param_query)
 
@@ -515,7 +516,7 @@ class SDSHook:
 
         type_query = 'get_computer'
         param_query = {k: v for k, v in {'identity': identity, 'ldap_filter': ldap_filter, 'properties': properties,
-                                         'search_scope': search_scope}.items() if v}
+                                         'search_scope': search_scope}.items() if v is not None}
 
         return self.query(type_query, param_query)
 
@@ -538,7 +539,7 @@ class SDSHook:
 
         type_query = 'get_contact'
         param_query = {k: v for k, v in {'identity': identity, 'ldap_filter': ldap_filter, 'properties': properties,
-                                         'search_scope': search_scope}.items() if v}
+                                         'search_scope': search_scope}.items() if v is not None}
 
         return self.query(type_query, param_query)
 
@@ -555,7 +556,7 @@ class SDSHook:
         """
 
         type_query = 'get_group_member'
-        param_query = {k: v for k, v in {'identity': identity}.items() if v}
+        param_query = {k: v for k, v in {'identity': identity}.items() if v is not None}
 
         return self.query(type_query, param_query)
 
@@ -579,7 +580,7 @@ class SDSHook:
         type_query = 'set_object'
         param_query = {k: v for k, v in
                        {'identity': identity, 'remove': remove, 'add': add, 'replace': replace, 'clear': clear,
-                        'display_name': display_name, 'description': description}.items() if v}
+                        'display_name': display_name, 'description': description}.items() if v is not None}
 
         return self.query(type_query, param_query)
 
@@ -618,7 +619,7 @@ class SDSHook:
                         'password_never_expires': password_never_expires,
                         'account_not_delegated': account_not_delegated,
                         'change_password_at_logon': change_password_at_logon,
-                        'account_expiration_date': account_expiration_date}.items() if v}
+                        'account_expiration_date': account_expiration_date}.items() if v is not None}
 
         return self.query(type_query, param_query)
 
@@ -647,7 +648,7 @@ class SDSHook:
         param_query = {k: v for k, v in
                        {'identity': identity, 'remove': remove, 'add': add, 'replace': replace, 'clear': clear,
                         'display_name': display_name, 'description': description, 'sam_account_name': sam_account_name,
-                        'group_scope': group_scope, 'group_category': group_category}.items() if v}
+                        'group_scope': group_scope, 'group_category': group_category}.items() if v is not None}
 
         return self.query(type_query, param_query)
 
@@ -671,7 +672,7 @@ class SDSHook:
         type_query = 'set_computer'
         param_query = {k: v for k, v in
                        {'identity': identity, 'remove': remove, 'add': add, 'replace': replace, 'clear': clear,
-                        'display_name': display_name, 'description': description}.items() if v}
+                        'display_name': display_name, 'description': description}.items() if v is not None}
 
         return self.query(type_query, param_query)
 
@@ -695,7 +696,7 @@ class SDSHook:
         type_query = 'set_contact'
         param_query = {k: v for k, v in
                        {'identity': identity, 'remove': remove, 'add': add, 'replace': replace, 'clear': clear,
-                        'display_name': display_name, 'description': description}.items() if v}
+                        'display_name': display_name, 'description': description}.items() if v is not None}
 
         return self.query(type_query, param_query)
 
@@ -709,7 +710,8 @@ class SDSHook:
         """
 
         type_query = 'set_account_password'
-        param_query = {k: v for k, v in {'identity': identity, 'account_password': account_password}.items() if v}
+        param_query = {k: v for k, v in {'identity': identity, 'account_password': account_password}.items()
+                       if v is not None}
 
         return self.query(type_query, param_query)
 
@@ -722,7 +724,7 @@ class SDSHook:
         """
 
         type_query = 'set_account_unlock'
-        param_query = {k: v for k, v in {'identity': identity}.items() if v}
+        param_query = {k: v for k, v in {'identity': identity}.items() if v is not None}
 
         return self.query(type_query, param_query)
 
@@ -737,7 +739,7 @@ class SDSHook:
         """
 
         type_query = 'add_group_member'
-        param_query = {k: v for k, v in {'identity': identity, 'members': members}.items() if v}
+        param_query = {k: v for k, v in {'identity': identity, 'members': members}.items() if v is not None}
 
         return self.query(type_query, param_query)
 
@@ -752,7 +754,7 @@ class SDSHook:
         """
 
         type_query = 'remove_group_member'
-        param_query = {k: v for k, v in {'identity': identity, 'members': members}.items() if v}
+        param_query = {k: v for k, v in {'identity': identity, 'members': members}.items() if v is not None}
 
         return self.query(type_query, param_query)
 
@@ -767,7 +769,7 @@ class SDSHook:
         """
 
         type_query = 'move_object'
-        param_query = {k: v for k, v in {'identity': identity, 'target_path': target_path}.items() if v}
+        param_query = {k: v for k, v in {'identity': identity, 'target_path': target_path}.items() if v is not None}
 
         return self.query(type_query, param_query)
 
@@ -781,7 +783,7 @@ class SDSHook:
         """
 
         type_query = 'rename_object'
-        param_query = {k: v for k, v in {'identity': identity, 'new_name': new_name}.items() if v}
+        param_query = {k: v for k, v in {'identity': identity, 'new_name': new_name}.items() if v is not None}
 
         return self.query(type_query, param_query)
 
@@ -816,7 +818,7 @@ class SDSHook:
                                          'account_not_delegated': account_not_delegated,
                                          'change_password_at_logon': change_password_at_logon,
                                          'account_expiration_date': account_expiration_date,
-                                         'other_attributes': other_attributes}.items() if v}
+                                         'other_attributes': other_attributes}.items() if v is not None}
 
         return self.query(type_query, param_query)
 
@@ -840,7 +842,7 @@ class SDSHook:
         param_query = {k: v for k, v in
                        {'path': path, 'name': name, 'sam_account_name': sam_account_name, 'display_name': display_name,
                         'group_scope': group_scope, 'group_category': group_category,
-                        'other_attributes': other_attributes}.items() if v}
+                        'other_attributes': other_attributes}.items() if v is not None}
 
         return self.query(type_query, param_query)
 
@@ -858,7 +860,7 @@ class SDSHook:
 
         type_query = 'new_contact'
         param_query = {k: v for k, v in {'path': path, 'name': name, 'display_name': display_name,
-                                         'other_attributes': other_attributes}.items() if v}
+                                         'other_attributes': other_attributes}.items() if v is not None}
 
         return self.query(type_query, param_query)
 
@@ -872,7 +874,7 @@ class SDSHook:
         """
 
         type_query = 'remove_object'
-        param_query = {k: v for k, v in {'identity': identity, 'type_object': type_object}.items() if v}
+        param_query = {k: v for k, v in {'identity': identity, 'type_object': type_object}.items() if v is not None}
 
         return self.query(type_query, param_query)
 
@@ -885,7 +887,7 @@ class SDSHook:
         """
 
         type_query = 'remove_user'
-        param_query = {k: v for k, v in {'identity': identity}.items() if v}
+        param_query = {k: v for k, v in {'identity': identity}.items() if v is not None}
 
         return self.query(type_query, param_query)
 
@@ -898,7 +900,7 @@ class SDSHook:
         """
 
         type_query = 'remove_group'
-        param_query = {k: v for k, v in {'identity': identity}.items() if v}
+        param_query = {k: v for k, v in {'identity': identity}.items() if v is not None}
 
         return self.query(type_query, param_query)
 
@@ -911,7 +913,7 @@ class SDSHook:
         """
 
         type_query = 'remove_computer'
-        param_query = {k: v for k, v in {'identity': identity}.items() if v}
+        param_query = {k: v for k, v in {'identity': identity}.items() if v is not None}
 
         return self.query(type_query, param_query)
 
@@ -924,6 +926,6 @@ class SDSHook:
         """
 
         type_query = 'remove_contact'
-        param_query = {k: v for k, v in {'identity': identity}.items() if v}
+        param_query = {k: v for k, v in {'identity': identity}.items() if v is not None}
 
         return self.query(type_query, param_query)
