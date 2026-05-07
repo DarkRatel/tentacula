@@ -137,7 +137,8 @@ def repl(m) -> str:
 
 
 def search_object(connect, _logger, ldap_filter, search_base, properties, type_object: DS_TYPE_OBJECT_SYSTEM = 'object',
-                  search_scope: DS_TYPE_SCOPE = "subtree", only_one: bool = False) -> list[DSDict]:
+                  search_scope: DS_TYPE_SCOPE = "subtree", only_one: bool = False,
+                  result_set_size: int | None = None) -> list[DSDict]:
     """
     Функция поиска объектов в СК
 
@@ -150,6 +151,7 @@ def search_object(connect, _logger, ldap_filter, search_base, properties, type_o
         type_object: Искомый тип объекта (по умолчанию object)
         search_scope: Глубина поиска
         only_one: Указатель, что поиск обязательно должен вернуть только один объект иначе ошибка
+        result_set_size: Ограничение на число объектов, которые должно быть возвращено
     """
     _logger.debug(f"SOURCE ldap_filter: {ldap_filter}")
 
@@ -217,17 +219,33 @@ def search_object(connect, _logger, ldap_filter, search_base, properties, type_o
         # Вычленение результатов
         _, objects, _, server_sprc = connect.result3(msgid)
 
+        # Поиск response control с cookie
+        pctrls = [c for c in server_sprc if c.controlType == SimplePagedResultsControl.controlType]
+
         # Обработка найденных объектов
         for one_object in objects:
             if one_object[0]:
+                # Если указан лимит на объекты, будет прерывание, если лимит уже исчерпан
+                if result_set_size and len(total_results) >= result_set_size:
+                    break
+
+                # Обработка и сохранение объекта
                 total_results.append(object_processing(connect=connect, data=one_object[1], properties=properties,
                                                        properties_shadow=properties_shadow, _logger=_logger))
 
-        # Проверки, что ещё есть данные для запроса
-        pctrls = [c for c in server_sprc if c.controlType == SimplePagedResultsControl.controlType]
-
+        # Если cookie есть
         if pctrls:
-            if pctrls[0].cookie:  # Скопировать cookie из элемента управления ответом в элемент управления запросом
+            # Если лимит уже использован и cookie остался, отправляется запрос прерывания очереди
+            if result_set_size and len(total_results) >= result_set_size and pctrls[0].cookie:
+                # Корректно закрываем paged search sequence на сервере
+                abandon_ctrl = SimplePagedResultsControl(criticality=True, size=0, cookie=pctrls[0].cookie)
+
+                connect.search_ext(base=search_base, scope=search_scope, filterstr=ldap_filter, attrlist=properties,
+                                   serverctrls=[abandon_ctrl], sizelimit=0)
+                break
+
+            if pctrls[0].cookie:
+                # Копирование cookie из элемента управления ответом в элемент управления запросом
                 req_ctrl.cookie = pctrls[0].cookie
             else:
                 break

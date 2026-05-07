@@ -17,17 +17,20 @@ class SpecData(BaseModel):
     ldap_filter: str = None
     properties: str | list | tuple = None
     search_scope: DS_TYPE_SCOPE = "subtree"
+    result_set_size: int | None = None
 
 
 def get_computer(login: str, password: str, host: str, base: str = None, identity: str | dict = None,
-                       ldap_filter: str = None, properties: str | list | tuple = None,
-                       search_scope: DS_TYPE_SCOPE = "subtree", log_level: int = None) -> list[DSDict]:
+                 ldap_filter: str = None, properties: str | list | tuple = None,
+                 search_scope: DS_TYPE_SCOPE = "subtree", log_level: int = None,
+                 result_set_size: int | None = None) -> list[DSDict]:
     with DSHook(login=login, password=password, host=host, port=636, base=base, log_level=log_level) as ds:
         result = ds.get_computer(
             identity=identity,
             ldap_filter=ldap_filter,
             properties=properties,
             search_scope=search_scope,
+            result_set_size=result_set_size,
         )
 
     return result

@@ -18,19 +18,21 @@ class SpecData(BaseModel):
     properties: str | list | tuple = None
     search_scope: DS_TYPE_SCOPE = "subtree"
     type_object: DS_TYPE_OBJECT = "object"
+    result_set_size: int | None = None
 
 
 def get_object(login: str, password: str, host: str, base: str = None, identity: str | dict = None,
-                     ldap_filter: str = None, properties: str | list | tuple = None,
-                     search_scope: DS_TYPE_SCOPE = "subtree", type_object: DS_TYPE_OBJECT = "object",
-                     log_level: int = None) -> list[DSDict]:
+               ldap_filter: str = None, properties: str | list | tuple = None,
+               search_scope: DS_TYPE_SCOPE = "subtree", type_object: DS_TYPE_OBJECT = "object",
+               log_level: int = None, result_set_size: int | None = None) -> list[DSDict]:
     with DSHook(login=login, password=password, host=host, port=636, base=base, log_level=log_level) as ds:
         result = ds.get_object(
             identity=identity,
             ldap_filter=ldap_filter,
             properties=properties,
             search_scope=search_scope,
-            type_object=type_object
+            type_object=type_object,
+            result_set_size=result_set_size,
         )
 
     return result
