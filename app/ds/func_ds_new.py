@@ -48,7 +48,7 @@ def ds_new(connect, _logger, dry_run: bool, type_object: DS_TYPE_OBJECT, path: s
     # Проверка, что дополнительные атрибуты не были переданы через ключи ранее и добавление атрибута в общий список
     if other_attributes:
         for key, value in other_attributes.items():
-            for (_, k, _) in list_object:
+            for k, _ in list_object:
                 if k.lower() == key.lower():
                     raise ValueError(f"Атрибут {key} уже был определён. Удалите его из other_attributes")
             list_object.append((key, convert_value(key, value)))
