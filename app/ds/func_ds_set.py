@@ -148,7 +148,7 @@ def ds_set(connect, _logger, type_object: DS_TYPE_OBJECT_SYSTEM, dry_run: bool,
     # Проверка значений и конвертация значений в UTF
     for index, (action, key, values) in enumerate(list_object):
         # Проверка, что сформирован список из значений
-        if not isinstance(values, list):
+        if not (isinstance(values, list) or values is None):
             raise ValueError(f"In {key} not list or None")
 
         if values is None:
