@@ -47,6 +47,7 @@ http {
         # Включение проверки клиентского сертификата
         ssl_client_certificate {{ ssl_ca_certs }};
         ssl_verify_client      on;
+        ssl_verify_depth        3; # Ожидаемая максимальная глубина цепочки сертификатов
         {% else %}
         listen      {{ port }};
         {% endif %}
