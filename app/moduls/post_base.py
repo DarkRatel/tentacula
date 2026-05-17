@@ -14,7 +14,9 @@ from app.systems.logging import logger
 from app.moduls.json_encoder import json_encoder
 
 STEP = 1500  # Общая переменная шага для списков, которые будут возвращены
-BEFORE_ANSWERING = 15  # Количество токенов, которое должно быть отсчитано, прежде чем сервер пошлёт сообщение
+BEFORE_ANSWERING = 150  # Количество токенов, которое должно быть отсчитано, прежде чем сервер пошлёт сообщение
+# Токены истекают каждую 0.1 секунды
+
 # Допустимые типы данных, которые могут быть возвращены эндпоинтом
 ReturnType = Union[int, str, float, list, tuple, dict, bool, None]
 
@@ -72,7 +74,7 @@ def create_post(router: APIRouter,
                     # Если все BEFORE_ANSWERING будут потрачены, то будет отправлена точка
                     pause_active = BEFORE_ANSWERING
                     while not task.done():
-                        await asyncio.sleep(1)
+                        await asyncio.sleep(0.1)
                         pause_active -= 1
 
                         if pause_active <= 0:
