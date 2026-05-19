@@ -60,9 +60,8 @@ def create_post(router: APIRouter,
                 Стримится один большой JSON, в рамках которого и получен ли успешный ответ в рамках запроса
                 """
                 logger.info("======Function======")
-                yield "{"
-                # Отправляется для отправки точки, пока на эндпоинте идёт обработка
-                yield '"waiting": "'
+                # Отправляется объявление словаря и ключа для отправки точки, пока на эндпоинте идёт обработка
+                yield '{"waiting": "'
 
                 s_result = None
                 try:
@@ -71,6 +70,7 @@ def create_post(router: APIRouter,
                     else:
                         task = asyncio.create_task(asyncio.to_thread(s_func))
 
+                    # Исполнение функции эндпоинта в фоновом режиме и проверка каждые 100 мс исполнилась ли функция
                     # Если все BEFORE_ANSWERING будут потрачены, то будет отправлена точка
                     pause_active = BEFORE_ANSWERING
                     while not task.done():
@@ -94,11 +94,9 @@ def create_post(router: APIRouter,
                     s_result = e
                     error = True
 
-                # Конец блока waiting и передача данных была ли зафиксирована ошибка
-                yield f'", "error": {str(error).lower()}, '
-
-                # Открытие блока для результата исполнения запроса на эндпоинте
-                yield '"details": '
+                # Конец блока waiting, ключ успешной или не успешной завершённости функции эндпоинта
+                # и открытие блока для результата исполнения запроса на эндпоинте
+                yield f'", "error": {str(error).lower()}, "details": '
 
                 # Если будет список с элементами больше чем STEP, то он будет отправляться по частям
                 if isinstance(s_result, list):
