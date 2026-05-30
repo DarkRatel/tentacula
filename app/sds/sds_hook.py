@@ -346,13 +346,13 @@ class SDSHook:
 
         # Прямое обращение к СК
         if self._type_conn == self.CONN_DS:
-            # В подключение прямого обращение к DS, передаётся переменная base
-            self._connect_ds.base = self.base
+            # В подключение прямого обращение к DS, передаётся переменная base, если была переназначена
+            if self.base and self._connect_ds.base != self.base:
+                self._connect_ds.base = self.base
             return getattr(self._connect_ds, type_query)(**param_query)
 
-        # base единственный параметр, который может быть переназначен при работе хука,
-        # поэтому для безопасности он переназначается при запросах (актуально не для прямого обращения к DS)
-        if self._param_conn.get('base') != self.base:
+        # Для всех альтернативных доступов base назначенный через переменную передаётся в запрос
+        if self.base and self._param_conn.get('base') != self.base:
             self._param_conn['base'] = self.base
 
         # copy используется, чтобы не изменилось оригинальное значение при формировании строки подходящей для логов
