@@ -108,32 +108,103 @@ def object_processing(connect, _logger, data, properties, properties_shadow) -> 
     return result
 
 
-# Регулярное выражение для парсинга строки поиска
-pattern = re.compile(r'\(([A-Za-z0-9]*)([><~]?=)((?:\([^=]*\)|\),|[^)])+)\)(?=$|[)(])')
+# Регулярное выражение для поиска атрибута и оператора
+ESCAPE_START_FILTER = re.compile("!?[A-Za-z0-9]*[0-9.:]*?[><~]?=")
+# Регулярное выражение для разбивки минимального элемента ldap-фильтра на части:
+# открывающая скобка, атрибут, оператор, значение, закрывающая скобка
+BREAK_INTO_PIECES = re.compile(r"^(\()(!?[A-Za-z0-9]*[0-9.:]*?)([><~]?=)(.*)(\)$)")
+# Регулярное выражение для проверки была ли уже конвертирован ldap-фильтр в RFC4515
+RFC4515_ESCAPE_RE = re.compile(r"\\[0-9A-F-a-f]{2}")
 
 
-def repl(m) -> str:
-    """Функция для изоляции значений в строке поиска.
-    Регулярное выражение разбивает каждую скобку на три элемента: атрибут, логический оператор и искомое значение.
-    Искомое значение конвертируется и изолируется
+def isolation_filter(ldap_filter: str) -> str:
     """
-    key = m.group(1)
-    value = m.group(3)
+    Конвертация ldap-фильтра в RFC4515
 
-    # Для корректного поиска, требуется конвертация в бинарник, поэтому есть исключение
-    if key.lower() == 'objectguid':
-        value = c_guid_to_binary(value)
-    else:
-        # Выражение разбивки может некорректно выделить значение, если оно заканчивается на скобку,
-        # поэтому есть компенсация возращения скобки, которая была ошибочно конвертирована
-        if value.endswith('))'):
-            value = ldap.filter.escape_filter_chars(value[:-1]) + ')'
+    Args:
+        ldap_filter: строка ldap-фильтра
+    """
+
+    # Если исходная строка уже имеет символы похожие на формат RFC4515, обработка не производится
+    if bool(RFC4515_ESCAPE_RE.search(ldap_filter)):
+        return ldap_filter
+
+    elements = {}  # Словарь для найденных минимальных элементов ldap-фильтра.
+    # Словарь уникальный id (<*>) элемента, значение элемент
+    element_id = 0  # Счётчик элементов для создания id
+
+    def decomposition(text: str) -> str:
+        """
+        Функция выделения минимального элемента фильтра.
+        Если элемент найден, то он выписывается в массив и процесс повторяется.
+        Если минимальный элемент больше не найден, то функция завершается
+
+        Args:
+            text: строка ldap-фильтра или её обрабатываемая версия
+        """
+
+        # Использование глобальных переменных, чтобы выписывать результаты вне функции
+        nonlocal elements
+        nonlocal element_id
+
+        # Поиск начала первого минимального элемента
+        ko = ESCAPE_START_FILTER.search(text)
+
+        # Если элемент найден, и перед элементом стояла открывающая скобка, значит обработка начинается
+        if ko and text[ko.start() - 1] == '(':
+
+            open_bracket = 0 # Переменная для счёта открывающих скобок
+            close_bracket = 0 # Переменная для счёта закрывающих скобок
+
+            # Сразу после найденного начала элементы, идёт перебор каждого последующего знака, для поиска конца значения
+            for ne in range(ko.end() + 1, len(text)):
+                # Если найдена закрывающая скобка, происходит основная обработка
+                if text[ne] == ')':
+                    # Если счётчик открывающих и закрывающих скобок равны или следующий элемент открывающая скобка,
+                    # значит последний элемент в строке найден
+                    if open_bracket == close_bracket or text[ne + 1] == '(':
+                        element_id += 1
+                        idx = f'<{element_id}>'
+                        elements.update({idx: text[ko.start() - 1:ne + 1]})
+                        # Из строки заменяется найденный элемент на id и строка передаётся на повторную обработку
+                        return decomposition(text[:ko.start() - 1] + idx + text[ne + 1:])
+                    # Иначе счётчик закрывающихся скобок увеличивается
+                    close_bracket += 1
+                # Если встречается открывающая скобка, то счётчик увеличивается и обработка продолжается
+                elif text[ne] == '(':
+                    open_bracket += 1
+            # Если конец значения не найден, фиксируется ошибка
+            raise RuntimeError("Ошибка парсинга ldap-фильтра - не был найден конец значения")
+
         else:
-            value = ldap.filter.escape_filter_chars(value)
-        # Если в значении есть знак *, он будет восстановлен после изоляции символов
-        value = value.replace(r"\2a", "*")
+            return text
 
-    return f"({key}{m.group(2)}{value})"
+    # Обработка ldap-фильтра
+    skeleton = decomposition(ldap_filter)
+
+    # Если в ldap-фильтре, в котором остались только id минимальных элементов
+    # не одинаковое количество открытых и закрытых скобок, значит обработка фильтра прошла некорректно
+    if skeleton.count('(') != skeleton.count(')'):
+        raise ValueError('Не удалось обработать фильтр из-за скобок. Попробуйте изолировать круглые скобки в значениях')
+
+    # Обработка минимальных найденных элементов ldap-фильтра
+    for k, v in elements.items():
+        # Разбивка элемента на части
+        v = BREAK_INTO_PIECES.split(v)
+
+        # Для корректного поиска, требуется конвертация в бинарник, поэтому есть исключение
+        if v[2].lower() == 'objectguid':
+            v[4] = c_guid_to_binary(v[4])
+        else:
+            # Изоляция значения
+            v[4] = ldap.filter.escape_filter_chars(v[4])
+            # Если в значении есть знак *, он будет восстановлен после изоляции символов
+            v[4] = v[4].replace(r"\2a", "*")
+
+        # Обработанный минимальный элемент возвращается на свой место
+        skeleton = skeleton.replace(k, ''.join(v))
+
+    return skeleton
 
 
 def search_object(connect, _logger, ldap_filter, search_base, properties, type_object: DS_TYPE_OBJECT_SYSTEM = 'object',
@@ -156,7 +227,7 @@ def search_object(connect, _logger, ldap_filter, search_base, properties, type_o
     _logger.debug(f"SOURCE ldap_filter: {ldap_filter}")
 
     # Конвертация LDAP-фильтра в вариант пригодный для LDAP
-    ldap_filter = pattern.sub(repl, ldap_filter)
+    ldap_filter = isolation_filter(ldap_filter)
 
     # Добавление в LDAP-фильтр дополнительных правил фильтрации, в зависимости от type_object
     ldap_filter = DataDSLDAP[type_object.upper()].unit(ldap_filter)
