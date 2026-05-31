@@ -4,7 +4,7 @@ import logging
 import time
 import base64
 from copy import copy
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import httpx, ssl
 import psycopg2
@@ -100,7 +100,8 @@ def encode_param(_public_key, param: dict):
     ).decode('utf-8')
 
 
-def request_db(_connect, _logger, db_table: str, timeout: int, type_query, param_conn, param_query):
+def request_db(_connect, _logger, db_table: str, timeout: int, pre_execution_delay: int, execution_delay: int,
+               type_query, param_conn, param_query):
     """
     Функция формирования задания для таблицы и получения ответа.
     Актуально для обращений через таблицу заданий и Шедуллер
@@ -113,6 +114,8 @@ def request_db(_connect, _logger, db_table: str, timeout: int, type_query, param
         type_query: Тип запроса к СК
         param_conn: Параметры подключения к СК
         param_query: Параметры запроса
+        pre_execution_delay: Время паузы между опросом БД на получение результата, когда задание ещё не взято в работу
+        execution_delay: Время паузы между опросом БД на получение результата, когда задание исполняется
     """
 
     # Отправка запроса в таблицу
@@ -125,35 +128,50 @@ def request_db(_connect, _logger, db_table: str, timeout: int, type_query, param
             query_id = cur.fetchone()[0]
             _logger.info(f"Task query_id = {query_id}")
 
-    # Перед попытками проверки ответа небольшая пауза
-    time.sleep(10)
+    dt_start = datetime.now()
+    dt_timeout = dt_start + timedelta(seconds=timeout)
+
+    # В переменную выписывается время задержки для паузы между запросами
+    pause_sec = pre_execution_delay
 
     # Проверка получения ответа
     with _connect:
         with _connect.cursor() as cur:
-            # timeout делится на 10, чтобы равномерно повторно отравлять запросы каждые 10 секунд
-            for _ in range(int(timeout / 10)):
-                cur.execute(
-                    f"SELECT status, result FROM {db_table}"
-                    f" WHERE id = {query_id} AND (status = 'complete' OR status = 'error')"
-                )
 
+            while True:
+                # Пауза перед повторной проверкой
+                time.sleep(pause_sec)
+
+                # Запрос статуса и результата из задания
+                cur.execute(f"SELECT status, result FROM {db_table} WHERE id = {query_id}")
+                # Получение результата
                 result = cur.fetchone()
 
+                # Если результат запроса был получен
                 if isinstance(result, tuple):
-                    cur.execute(f"DELETE FROM {db_table} WHERE id = {query_id}")
-                    cur.connection.commit()
+                    # Если задание перешло в статусы связанные с его исполнением на Tentacula, время паузы обновляется
+                    if result[0] in ['working', 'in_line']:
+                        pause_sec = execution_delay
 
                     if result[0] == 'error':
+                        cur.execute(f"DELETE FROM {db_table} WHERE id = {query_id}")
+                        cur.connection.commit()
+
                         raise RuntimeError(result[1])
 
-                    if isinstance(result[1], list):
-                        return [DSDict(i) for i in result[1]]
-                    return result[1]
+                    if result[0] == 'complete':
+                        cur.execute(f"DELETE FROM {db_table} WHERE id = {query_id}")
+                        cur.connection.commit()
 
-                time.sleep(10)
-            else:
-                raise TimeoutError("Данные не появились за 5 минут")
+                        if isinstance(result[1], list):
+                            return [DSDict(i) for i in result[1]]
+                        return result[1]
+                else:
+                    raise RuntimeError("В таблице не найдено задание")
+
+                # Если время вышло, процесс ожидания прерывается
+                if datetime.now() > dt_timeout:
+                    raise TimeoutError("Время ожидания выполнения запроса истекло")
 
 
 class SDSHook:
@@ -165,7 +183,8 @@ class SDSHook:
     def __init__(self, login: str = None, password: str = None, host: str = None, port: int = 636, base: str = None,
                  dry_run: bool = False, log_level: int = None, public_key: str = None, timeout: int = 180,
                  db_login: str = None, db_password: str = None, db_host: str = None, db_port: int = 5432,
-                 database: str = None, url: str | list = None, cert_root: str = None, cert_file: str = None,
+                 database: str = None, db_pre_execution_delay: int = 10, db_execution_delay: int = 1,
+                 url: str | list = None, cert_root: str = None, cert_file: str = None,
                  cert_key: str = None, tent_login: str = None, tent_pass: str = None, airflow_conn_id: str = None,
                  airflow_conn=None) -> None:
         """
@@ -185,12 +204,14 @@ class SDSHook:
             dry_run: Формирование запроса, без внесения изменений в DS
             log_level: Тип логирования (принимает значения от logging)
             public_key: Публичный ключ для шифрования данных запросов отправленных в таблицу БД
-            timeout: Время ожидания ответа от сервера или БД в секундах
+            timeout: Время ожидания ответа от сБД в секундах
             db_login: Логин для доступа к БД
             db_password: Пароль для доступа к БД
             db_host: Хост БД
             db_port: Порт БД
             database: Имя БД
+            db_pre_execution_delay: Время паузы в секундах между опросом БД на получение результата, когда задание ещё не взято в работу
+            db_execution_delay: Время паузы в секундах между опросом БД на получение результата, когда задание исполняется
             url: Адрес Тентакли
             cert_root: Путь до корневого сертификата
             cert_file: Путь до клиентского сертификата
@@ -227,6 +248,8 @@ class SDSHook:
                 dry_run = dry_run or _data.get("dry_run", False)
                 log_level = log_level or _data.get("log_level", None)
                 timeout = timeout or _data.get("timeout", None)
+                db_pre_execution_delay = db_pre_execution_delay or _data.get("db_pre_execution_delay", None)
+                db_execution_delay = db_execution_delay or _data.get("db_execution_delay", None)
 
                 # Получение подключения к БД, если необходимо использовать
                 db_conn_id = _data.get("db_conn_id", None)
@@ -256,6 +279,8 @@ class SDSHook:
         self._db_password = db_password
         self._db_host = db_host
         self._db_port = db_port
+        self._db_pre_execution_delay = db_pre_execution_delay
+        self._db_execution_delay = db_execution_delay
         self._database = database
         self._cert_root = cert_root
         self._cert_file = cert_file
@@ -422,7 +447,8 @@ class SDSHook:
                     _connect=self._connect_db, _logger=self._logger, db_table=self._db_table,
                     timeout=self._timeout, type_query=type_query,
                     param_conn=encode_param(self._public_key, mask_protect_data(self._param_conn, hide_pass=False)),
-                    param_query=encode_param(self._public_key, mask_protect_data(param_query, hide_pass=False))
+                    param_query=encode_param(self._public_key, mask_protect_data(param_query, hide_pass=False)),
+                    pre_execution_delay=self._db_pre_execution_delay, execution_delay=self._db_execution_delay
                 )
             )
         else:
