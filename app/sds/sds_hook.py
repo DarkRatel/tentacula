@@ -292,7 +292,7 @@ class SDSHook:
         elif all([self._login, self._password, self._host]):
             self._type_conn = self.CONN_DS
         else:
-            raise ValueError("Нет подходящего набора данных")
+            raise ValueError("В запросе не указан минимальный набор ключей ни для одного типа запроса")
 
     def __enter__(self):
         """Автоматическое открытие сессии"""
