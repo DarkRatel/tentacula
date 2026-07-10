@@ -251,6 +251,12 @@ class SDSHook:
                 db_pre_execution_delay = db_pre_execution_delay or _data.get("db_pre_execution_delay", None)
                 db_execution_delay = db_execution_delay or _data.get("db_execution_delay", None)
 
+                db_login = db_login or _data.get("db_login", None)
+                db_password = db_password or _data.get("db_password", None)
+                db_host = db_host or _data.get("db_host", None)
+                db_port = db_port or _data.get("db_port", None)
+                database = database or _data.get("database", None)
+
                 # Получение подключения к БД, если необходимо использовать
                 db_conn_id = _data.get("db_conn_id", None)
                 if db_conn_id:
