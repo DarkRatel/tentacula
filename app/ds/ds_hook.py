@@ -48,7 +48,7 @@ def kinit_keytab(login: str, keytab: str):
 
 class DSHook:
     def __init__(self, host: str | list, login: str, password: str = None, keytab: str = None,
-                 port: int = 636, base: str = None, dry_run: bool = False, log_level: int = None) -> None:
+                 port: int = 636, base: str = None, dry_run: bool = False, log_level: int = logging.INFO) -> None:
         """
         Класс создаёт сессию с DS, в рамках который будет исполнен запрос к каталогу
         (запрос описывается в рамках наследованных функций).
