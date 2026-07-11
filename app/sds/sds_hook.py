@@ -183,7 +183,7 @@ class SDSHook:
     def __init__(self, login: str = None, password: str = None, host: str = None, port: int = 636, base: str = None,
                  dry_run: bool = False, log_level: int = logging.INFO, public_key: str = None, timeout: int = 180,
                  db_login: str = None, db_password: str = None, db_host: str = None, db_port: int = 5432,
-                 database: str = None, db_pre_execution_delay: int = 10, db_execution_delay: int = 1,
+                 database: str = None, db_pre_execution_delay: float = 0.1, db_execution_delay: float = 0.1,
                  url: str | list = None, cert_root: str = None, cert_file: str = None,
                  cert_key: str = None, tent_login: str = None, tent_pass: str = None, airflow_conn_id: str = None,
                  airflow_conn=None) -> None:
