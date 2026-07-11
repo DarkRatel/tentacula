@@ -120,7 +120,7 @@ async def task_processing(source_uuid: str, task_id: int):
             if param_conn['host'] in AppConfig.SCHEDULERS_DS__TRANSIT:
                 transit = AppConfig.SCHEDULERS_DS__TRANSIT[param_conn['host']]
                 param_conn['host'] = transit['host']
-                param_conn = transit | param_conn
+                param_conn.update({k: v for k, v in transit.items() if not param_conn.get(k)})
 
                 logger.info('Transit Param Connect: %s', param_conn)
 
