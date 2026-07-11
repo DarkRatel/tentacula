@@ -9,7 +9,7 @@ from app.systems.config import AppConfig
 class SpecData(BaseModel):
     login: str
     password: str
-    host: str
+    host: str | list[str]
     base: str = None
     log_level: int = None
 
@@ -20,7 +20,7 @@ class SpecData(BaseModel):
     result_set_size: int | None = None
 
 
-def get_user(login: str, password: str, host: str, base: str = None, identity: str | dict = None,
+def get_user(login: str, password: str, host: str | list[str], base: str = None, identity: str | dict = None,
              ldap_filter: str = None, properties: str | list | tuple = None,
              search_scope: DS_TYPE_SCOPE = "subtree", log_level: int = None,
              result_set_size: int | None = None) -> list[DSDict]:

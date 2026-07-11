@@ -9,14 +9,14 @@ from app.systems.config import AppConfig
 class SpecData(BaseModel):
     login: str
     password: str
-    host: str
+    host: str | list[str]
     base: str = None
     log_level: int = None
 
     identity: str | dict
 
 
-def remove_computer(login: str, password: str, host: str, identity: str | dict, base: str = None,
+def remove_computer(login: str, password: str, host: str | list[str], identity: str | dict, base: str = None,
                     log_level: int = None):
     with DSHook(login=login, password=password, host=host, port=636, base=base, log_level=log_level) as ds:
         ds.remove_computer(

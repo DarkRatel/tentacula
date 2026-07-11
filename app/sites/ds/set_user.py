@@ -10,7 +10,7 @@ from app.systems.config import AppConfig
 class SpecData(BaseModel):
     login: str
     password: str
-    host: str
+    host: str | list[str]
     base: str = None
     log_level: int = None
 
@@ -29,7 +29,7 @@ class SpecData(BaseModel):
     account_expiration_date: bool | datetime = None
 
 
-def set_user(login: str, password: str, host: str, identity: str | dict, base: str = None,
+def set_user(login: str, password: str, host: str | list[str], identity: str | dict, base: str = None,
              remove: dict[str, list | bool | str] = None, add: dict[str, list | bool | str] = None,
              replace: dict[str, list | bool | str] = None, clear: list[str] = None,
              display_name: str = None, sam_account_name: str = None, user_principal_name: str = None,
