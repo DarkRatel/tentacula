@@ -180,7 +180,7 @@ class SDSHook:
     CONN_TENT = 2
     CONN_DB = 3
 
-    def __init__(self, login: str = None, password: str = None, host: str | list = None, port: int = 636,
+    def __init__(self, login: str = None, password: str = None, host: str | list[str] = None, port: int = 636,
                  base: str = None, dry_run: bool = False, log_level: int = logging.INFO, public_key: str = None,
                  timeout: int = 180, db_login: str = None, db_password: str = None, db_host: str = None,
                  db_port: int = 5432, database: str = None, db_pre_execution_delay: float = 0.1,
