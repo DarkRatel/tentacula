@@ -202,6 +202,12 @@ class _AppConfig:
             if not all([self.APP__DB_ASYNC_URL, self.APP__SECRET_KEY]):
                 raise AttributeError("Schedulers_ds requires APP__DB_ASYNC_URL and APP__SECRET_KEY")
 
+            self.SCHEDULERS_DS__POLLING_ATTEMPTS = _read_any(config=_config, chapter='schedulers_ds',
+                                                             name='POLLING_ATTEMPTS', default=600, type_=int)
+            self.SCHEDULERS_DS__PAUSE_BETWEEN_ATTEMPTS = _read_any(config=_config, chapter='schedulers_ds',
+                                                                   name='PAUSE_BETWEEN_ATTEMPTS', default=0.1,
+                                                                   type_=float)
+
 
 # Инициализация конфигурации
 AppConfig = _AppConfig()

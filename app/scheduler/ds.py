@@ -159,37 +159,47 @@ async def scheduler_ds_tasker():
     source_uuid = str(uuid.uuid4())
     s_id_ctx_var.set(source_uuid)
 
-    logger.info("Active background tasks: %s", len(background_tasks))
+    if background_tasks:
+        logger.info("Active background tasks: %s", len(background_tasks))
 
-    async with AsyncSessionLocal() as db:
-        # Запрос всех заданий в статусе ожидающих обработку
-        result = await db.execute(select(Tasker).where(
-            (Tasker.status == 'waiting')
-        ))
-        tasks = result.scalars().all()
+    for _ in range(AppConfig.SCHEDULERS_DS__POLLING_ATTEMPTS):
+        task_ids = None
 
-        if not tasks:
-            logger.info("Not found new tasks in DB")
-            return
+        # Подключение к БД
+        async with AsyncSessionLocal() as db:
 
-        # Изменение статуса для взрытых в работу
-        for task in tasks:
-            task.status = "in_line"
-        await db.commit()
+            # Запрос всех заданий в статусе ожидающих обработку
+            result = await db.execute(select(Tasker).where(
+                (Tasker.status == 'waiting')
+            ))
+            tasks = result.scalars().all()
 
-        task_ids = [task.id for task in tasks]
+            if tasks:
+                # Изменение статуса для взрытых в работу
+                for task in tasks:
+                    task.status = "in_line"
+                await db.commit()
 
-        logger.info(f"New tasks id for run: %s", task_ids)
+                task_ids = [task.id for task in tasks]
 
-    # Для всех найденных заданий формирование задания для исполнения на заднем фоне
-    for task_id in task_ids:
-        bg_task = asyncio.create_task(task_processing(source_uuid, task_id))
-        track_background_task(bg_task)
+                logger.info(f"New tasks id for run: %s", task_ids)
 
+        if task_ids:
+            # Для всех найденных заданий формирование задания для исполнения на заднем фоне
+            for task_id in task_ids:
+                bg_task = asyncio.create_task(task_processing(source_uuid, task_id))
+                track_background_task(bg_task)
+
+        await asyncio.sleep(AppConfig.SCHEDULERS_DS__PAUSE_BETWEEN_ATTEMPTS)
+
+
+# Формирование частоты запуска шедуллера
+seconds = ((AppConfig.SCHEDULERS_DS__POLLING_ATTEMPTS * AppConfig.SCHEDULERS_DS__PAUSE_BETWEEN_ATTEMPTS)
+           + AppConfig.SCHEDULERS_DS__PAUSE_BETWEEN_ATTEMPTS)
 
 # Запуск заданий для обращения к СК
-scheduler.add_job(scheduler_ds_tasker, "interval", minutes=1, id="scheduler_ds_tasker",
-                  max_instances=1, coalesce=True)
+scheduler.add_job(scheduler_ds_tasker, "interval", seconds=seconds,
+                  id="scheduler_ds_tasker", max_instances=1, coalesce=True, misfire_grace_time=None)
 
 
 async def scheduler_ds_cleaning():
@@ -200,6 +210,7 @@ async def scheduler_ds_cleaning():
     async with AsyncSessionLocal() as db:
         await db.execute(delete(Tasker).where(Tasker.created_at < func.now() - timedelta(hours=1)))
         await db.commit()
+
 
 # Запуск удаления неиспользованных заданий
 scheduler.add_job(scheduler_ds_cleaning, "interval", minutes=60, id="scheduler_ds_cleaning",
