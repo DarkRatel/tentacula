@@ -9,7 +9,7 @@ from app.systems.config import AppConfig
 class SpecData(BaseModel):
     login: str
     password: str
-    host: str| list[str]
+    host: str | list[str]
     base: str = None
     log_level: int = None
 
