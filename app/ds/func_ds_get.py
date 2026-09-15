@@ -15,6 +15,8 @@ from .ds_dict import DSDict
 from .attributes_type import ATTR_TYPES
 from .convertors_value import convert_grouptype, convert_object_class, uac_to_flags, _UAC_FLAGS
 
+DEFAULT_SIZE_LDAP_PAGE = 1499
+
 # Особая обработка атрибутов, которая противоречит стандартному правилу чтения атрибута указанного в TYPE_HANDLERS
 ATTR_SPECIAL = DSDict({
     "objectGUID": lambda v: [str(uuid.UUID(bytes_le=i)) for i in v],
@@ -278,11 +280,16 @@ def search_object(connect, _logger, ldap_filter, search_base, properties, type_o
                  f"ldap_filter: {ldap_filter}, properties: {properties}")
 
     # Размер очереди по умолчанию
-    req_ctrl = SimplePagedResultsControl(criticality=False, size=1499, cookie='')
+    req_ctrl = SimplePagedResultsControl(criticality=False, size=DEFAULT_SIZE_LDAP_PAGE, cookie='')
 
     # Цикл на получение всех объект
     total_results = []
     while True:
+        # Если указано ограничение на число запрашиваемых объектов, размер запрашиваемой страницы будет ограничиваться
+        if isinstance(result_set_size, int):
+            difference = result_set_size - len(total_results)
+            req_ctrl.size = DEFAULT_SIZE_LDAP_PAGE if difference > DEFAULT_SIZE_LDAP_PAGE else difference
+
         # Запрос на получение результатов
         msgid = connect.search_ext(base=search_base, scope=search_scope, filterstr=ldap_filter, attrlist=properties,
                                    serverctrls=[req_ctrl])
@@ -296,13 +303,11 @@ def search_object(connect, _logger, ldap_filter, search_base, properties, type_o
         # Обработка найденных объектов
         for one_object in objects:
             if one_object[0]:
-                # Если указан лимит на объекты, будет прерывание, если лимит уже исчерпан
-                if result_set_size and len(total_results) >= result_set_size:
-                    break
-
                 # Обработка и сохранение объекта
-                total_results.append(object_processing(connect=connect, data=one_object[1], properties=properties,
-                                                       properties_shadow=properties_shadow, _logger=_logger))
+                total_results.append(
+                    object_processing(connect=connect, data=one_object[1], properties=properties,
+                                      properties_shadow=properties_shadow, _logger=_logger, range_on=range_on)
+                )
 
         # Если cookie есть
         if pctrls:
