@@ -469,8 +469,8 @@ class SDSHook:
 
     def get_object(
             self, identity: str | dict | DSDict = None, ldap_filter: str = None,
-            properties: str | list | tuple = None, search_scope: DS_TYPE_SCOPE = "subtree",
-            type_object: DS_TYPE_OBJECT = "object", result_set_size: int | None = None
+            properties: str | list | tuple = None, search_scope: DS_TYPE_SCOPE = None,
+            type_object: DS_TYPE_OBJECT = None, result_set_size: int | None = None, range_on: bool = None
     ) -> list[DSDict]:
         """
         Функция запроса любого объекта из каталога.
@@ -490,8 +490,8 @@ class SDSHook:
 
     def get_user(
             self, identity: str | dict | DSDict = None, ldap_filter: str = None,
-            properties: str | list | tuple = None, search_scope: DS_TYPE_SCOPE = "subtree",
-            result_set_size: int | None = None
+            properties: str | list | tuple = None, search_scope: DS_TYPE_SCOPE = None,
+            result_set_size: int | None = None, range_on: bool = None
     ) -> list[DSDict]:
         """
         Функция запроса пользователя из каталога.
@@ -510,8 +510,8 @@ class SDSHook:
 
     def get_group(
             self, identity: str | dict | DSDict = None, ldap_filter: str = None,
-            properties: str | list | tuple = None, search_scope: DS_TYPE_SCOPE = "subtree",
-            result_set_size: int | None = None
+            properties: str | list | tuple = None, search_scope: DS_TYPE_SCOPE = None,
+            result_set_size: int | None = None, range_on: bool = None
     ) -> list[DSDict]:
         """
         Функция запроса компьютера из каталога DS.
@@ -530,8 +530,8 @@ class SDSHook:
 
     def get_computer(
             self, identity: str | dict | DSDict = None, ldap_filter: str = None,
-            properties: str | list | tuple = None, search_scope: DS_TYPE_SCOPE = "subtree",
-            result_set_size: int | None = None
+            properties: str | list | tuple = None, search_scope: DS_TYPE_SCOPE = None,
+            result_set_size: int | None = None, range_on: bool = None
     ) -> list[DSDict]:
         """
         Функция запроса компьютера из каталога DS.
@@ -550,8 +550,8 @@ class SDSHook:
 
     def get_contact(
             self, identity: str | dict | DSDict = None, ldap_filter: str = None,
-            properties: str | list | tuple = None, search_scope: DS_TYPE_SCOPE = "subtree",
-            result_set_size: int | None = None
+            properties: str | list | tuple = None, search_scope: DS_TYPE_SCOPE = None,
+            result_set_size: int | None = None, range_on: bool = None
     ) -> list[DSDict]:
         """
         Функция запроса контактов из каталога DS.
@@ -579,11 +579,7 @@ class SDSHook:
         Returns:
             Список объектов из DS
         """
-
-        type_query = 'get_group_member'
-        param_query = {k: v for k, v in {'identity': identity}.items() if v is not None}
-
-        return self.query(type_query, param_query)
+        return self._query('get_group_member', locals_value(locals()))
 
     def set_object(self, identity: str | dict | DSDict,
                    remove: dict[str, list | bool | str] = None, add: dict[str, list | bool | str] = None,
@@ -805,9 +801,7 @@ class SDSHook:
         """
         return self._query('new_contact', locals_value(locals()))
 
-        return self.query(type_query, param_query)
-
-    def remove_object(self, identity: str | dict | DSDict, type_object: DS_TYPE_OBJECT = "object") -> None:
+    def remove_object(self, identity: str | dict | DSDict, type_object: DS_TYPE_OBJECT = None) -> None:
         """
             Функция удаления объекта.
 
