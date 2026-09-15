@@ -370,7 +370,7 @@ class SDSHook:
         else:
             raise ValueError("Не удалось определить тип подключения")
 
-    def query(self, type_query, param_query):
+    def _query(self, type_query, param_query):
         """
         Функция отправки запросов через целевой метод
 
