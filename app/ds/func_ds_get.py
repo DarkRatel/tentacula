@@ -34,6 +34,8 @@ TYPE_HANDLERS = {
     "2.5.5.8": lambda v: [c_bool_string_to_bool(i.decode("utf-8")) for i in v],
     # Целое число
     "2.5.5.9": lambda v: [int(i) for i in v],
+    # OctetString (массив байтов / строка октетов)
+    "2.5.5.10": lambda v: [i for i in v],
     # Время в формате UTC (напр. 20240916132547.0Z).
     "2.5.5.11": lambda v: [c_datetime_unicode_to_python(i) for i in v],
     # Юникод (Строка "Пропустить регистр")
