@@ -69,18 +69,21 @@ ATTR_EXTEND = {
 }
 
 
-def object_processing(connect, _logger, data, properties, properties_shadow) -> DSDict:
+def object_processing(connect, _logger, data, properties, properties_shadow, range_on) -> DSDict:
     """Основная функция конвертации данных полученных объекта полученных из СК"""
     result = DSDict()
     # Перебор полученных атрибутов и значений
     for attr, values in data.items():
-        # Если есть атрибут со свойством "range", атрибут перезапрашивается, пока не будут получены все значения
+        # Если есть атрибут со свойством "range", то он специально обрабатывается
         if ';' in attr:
             temp = attr.split(';')[0]
             temp, attr = attr, temp
-            values += search_attribute_range(
-                connect=connect, dn=data['distinguishedName'][0].decode("utf-8"), attribute=temp, _logger=_logger
-            )
+            # Если включен запрос всех значений из атрибута,
+            # то атрибут будет запрашиваться, пока не будет получен полностью
+            if range_on:
+                values += search_attribute_range(
+                    connect=connect, dn=data['distinguishedName'][0].decode("utf-8"), attribute=temp, _logger=_logger
+                )
 
         # Получение базовых свойств атрибута. Если их нет в библиотеке, атрибут считается мультистроковым
         action = ATTR_TYPES.get(attr, ('unknown', False))
@@ -213,7 +216,7 @@ def isolation_filter(ldap_filter: str) -> str:
 
 def search_object(connect, _logger, ldap_filter, search_base, properties, type_object: DS_TYPE_OBJECT_SYSTEM = 'object',
                   search_scope: DS_TYPE_SCOPE = "subtree", only_one: bool = False,
-                  result_set_size: int | None = None) -> list[DSDict]:
+                  result_set_size: int | None = None, range_on: bool = True) -> list[DSDict]:
     """
     Функция поиска объектов в СК
 
@@ -227,6 +230,7 @@ def search_object(connect, _logger, ldap_filter, search_base, properties, type_o
         search_scope: Глубина поиска
         only_one: Указатель, что поиск обязательно должен вернуть только один объект иначе ошибка
         result_set_size: Ограничение на число объектов, которые должно быть возвращено
+        range_on: Параметр включающий запрос всех значений из атрибутов с большим количеством значений
     """
     _logger.debug(f"SOURCE ldap_filter: {ldap_filter}")
 

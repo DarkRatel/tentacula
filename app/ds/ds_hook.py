@@ -136,7 +136,7 @@ class DSHook:
     def get_object(
             self, identity: str | dict | DSDict = None, ldap_filter: str = None,
             properties: str | list | tuple = None, search_scope: DS_TYPE_SCOPE = "subtree",
-            type_object: DS_TYPE_OBJECT = "object", result_set_size: int | None = None
+            type_object: DS_TYPE_OBJECT = "object", result_set_size: int | None = None, range_on: bool = True
     ) -> list[DSDict]:
         """
         Функция запроса любого объекта из каталога.
@@ -148,6 +148,7 @@ class DSHook:
             search_scope: Глубина поиска
             type_object: К фильтру поиска добавляется фильтр типа объекта  ("object", "user", "group", "computer" или "contact") (по умолчанию)
             result_set_size: Ограничение на число объектов, которые должно быть возвращено (Если None ограничений нет)
+            range_on: Параметр включающий запрос всех значений из атрибутов с большим количеством элементов
             
         Returns:
             Список объектов из DS
@@ -181,7 +182,8 @@ class DSHook:
                 properties=properties,
                 type_object=type_object,
                 only_one=True,
-                result_set_size=result_set_size
+                result_set_size=result_set_size,
+                range_on=range_on,
             )
         elif ldap_filter:
             result = search_object(
@@ -192,7 +194,8 @@ class DSHook:
                 search_scope=search_scope,
                 properties=properties,
                 type_object=type_object,
-                result_set_size=result_set_size
+                result_set_size=result_set_size,
+                range_on=range_on,
             )
         else:
             raise RuntimeError("You must use one of the filters")
@@ -202,7 +205,7 @@ class DSHook:
     def get_user(
             self, identity: str | dict | DSDict = None, ldap_filter: str = None,
             properties: str | list | tuple = None, search_scope: DS_TYPE_SCOPE = "subtree",
-            result_set_size: int | None = None
+            result_set_size: int | None = None, range_on: bool = True
     ) -> list[DSDict]:
         """
         Функция запроса пользователя из каталога.
@@ -213,17 +216,19 @@ class DSHook:
             properties: Запрос дополнительных атрибутов. '*' возвращает все заполненные атрибуты. Расширенные атрибуты: Enabled, PasswordNeverExpires, AccountNotDelegated (на основе userAccountControl), ChangePasswordAtLogon (на основе pwdLastSet), FlagsUAC (флаги из атрибута userAccountControl)
             search_scope: Глубина поиска
             result_set_size: Ограничение на число объектов, которые должно быть возвращено (Если None ограничений нет)
+            range_on: Параметр включающий запрос всех значений из атрибутов с большим количеством элементов
 
         Returns:
             Список объектов из DS
         """
         return self.get_object(identity=identity, ldap_filter=ldap_filter, properties=properties,
-                               search_scope=search_scope, type_object="user", result_set_size=result_set_size)
+                               search_scope=search_scope, type_object="user", result_set_size=result_set_size,
+                               range_on=range_on)
 
     def get_group(
             self, identity: str | dict | DSDict = None, ldap_filter: str = None,
             properties: str | list | tuple = None, search_scope: DS_TYPE_SCOPE = "subtree",
-            result_set_size: int | None = None
+            result_set_size: int | None = None, range_on: bool = True
     ) -> list[DSDict]:
         """
         Функция запроса компьютера из каталога DS.
@@ -234,17 +239,19 @@ class DSHook:
             properties: Запрос дополнительных атрибутов. '*' возвращает все заполненные атрибуты. Расширенные атрибуты: GroupScope (на основе groupType), GroupCategory (на основе groupType), FlagsGT (флаги из атрибута groupType)
             search_scope: Глубина поиска
             result_set_size: Ограничение на число объектов, которые должно быть возвращено (Если None ограничений нет)
+            range_on: Параметр включающий запрос всех значений из атрибутов с большим количеством элементов
 
         Returns:
             Список объектов из DS
         """
         return self.get_object(identity=identity, ldap_filter=ldap_filter, properties=properties,
-                               search_scope=search_scope, type_object="group", result_set_size=result_set_size)
+                               search_scope=search_scope, type_object="group", result_set_size=result_set_size,
+                               range_on=range_on)
 
     def get_computer(
             self, identity: str | dict | DSDict = None, ldap_filter: str = None,
             properties: str | list | tuple = None, search_scope: DS_TYPE_SCOPE = "subtree",
-            result_set_size: int | None = None
+            result_set_size: int | None = None, range_on: bool = True
     ) -> list[DSDict]:
         """
         Функция запроса компьютера из каталога DS.
@@ -255,17 +262,19 @@ class DSHook:
             properties: Запрос дополнительных атрибутов. '*' возвращает все заполненные атрибуты. Расширенные атрибуты: Enabled, PasswordNeverExpires, AccountNotDelegated (на основе userAccountControl), ChangePasswordAtLogon (на основе pwdLastSet), FlagsUAC (флаги из атрибута userAccountControl)
             search_scope: Глубина поиска
             result_set_size: Ограничение на число объектов, которые должно быть возвращено (Если None ограничений нет)
+            range_on: Параметр включающий запрос всех значений из атрибутов с большим количеством элементов
 
         Returns:
             Список объектов из DS
         """
         return self.get_object(identity=identity, ldap_filter=ldap_filter, properties=properties,
-                               search_scope=search_scope, type_object="computer", result_set_size=result_set_size)
+                               search_scope=search_scope, type_object="computer", result_set_size=result_set_size,
+                               range_on=range_on)
 
     def get_contact(
             self, identity: str | dict | DSDict = None, ldap_filter: str = None,
             properties: str | list | tuple = None, search_scope: DS_TYPE_SCOPE = "subtree",
-            result_set_size: int | None = None
+            result_set_size: int | None = None, range_on: bool = True
     ) -> list[DSDict]:
         """
         Функция запроса контактов из каталога DS.
@@ -276,12 +285,14 @@ class DSHook:
             properties: Запрос дополнительных атрибутов. '*' возвращает все заполненные атрибуты
             search_scope: Глубина поиска
             result_set_size: Ограничение на число объектов, которые должно быть возвращено (Если None ограничений нет)
+            range_on: Параметр включающий запрос всех значений из атрибутов с большим количеством элементов
 
         Returns:
             Список объектов из DS
         """
         return self.get_object(identity=identity, ldap_filter=ldap_filter, properties=properties,
-                               search_scope=search_scope, type_object="contact", result_set_size=result_set_size)
+                               search_scope=search_scope, type_object="contact", result_set_size=result_set_size,
+                               range_on=range_on)
 
     def get_group_member(self, identity: str | dict | DSDict) -> list[DSDict]:
         """
