@@ -64,7 +64,7 @@ def ds_new(connect, _logger, dry_run: bool, type_object: DS_TYPE_OBJECT, path: s
         if key.lower() == 'unicodePwd'.lower():
             list_object[index] = (key, [f'"{v}"'.encode("utf-16-le") for v in values])
         else:
-            list_object[index] = (key, [v.encode("utf-8") for v in values])
+            list_object[index] = (key, [v if isinstance(v, bytes) else v.encode("utf-8") for v in values])
 
     _logger.debug(f"New {type_object}: DN: {dn}, "
                   f"value: {[(k, ['***'] if k.lower() == 'unicodepwd' else v) for k, v in list_object]}")
