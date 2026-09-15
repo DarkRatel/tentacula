@@ -89,8 +89,8 @@ def object_processing(connect, _logger, data, properties, properties_shadow) -> 
         # Последовательность:
         # Либо правило для конкретного атрибута
         # Либо правило для специальной обработки атрибута
-        # Либо значение преобразовывается в hex, для совместимости с JSON
-        handler = ATTR_SPECIAL.get(attr, TYPE_HANDLERS.get(action[0], lambda v: [f"hex:{i.hex()}" for i in v]))
+        # Либо значение преобразовывается в UTF-8
+        handler = ATTR_SPECIAL.get(attr, TYPE_HANDLERS.get(action[0], lambda v: [i.decode("utf-8") for i in v]))
 
         # Исполнение конвертации значения согласно полученному правилу
         result[attr] = handler(values)
