@@ -11,7 +11,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 
 from app.moduls.auth import get_current_user
 from app.systems.logging import logger
-from app.moduls.json_encoder import json_encoder
+from app.moduls.json_convert import json_encoder, json_decoder
 
 STEP = 1500  # Общая переменная шага для списков, которые будут возвращены
 BEFORE_ANSWERING = 150  # Количество токенов, которое должно быть отсчитано, прежде чем сервер пошлёт сообщение
@@ -123,14 +123,14 @@ def create_post(router: APIRouter,
             try:
                 # Преобразование полученных значений если они были переданы
                 if data:
-                    input_dada = data.model_dump()
+                    data = json_decoder(data.model_dump())
                     # Вывод входных данных в логи
                     logger.info("Input data: %s", input_dada)
                 else:
-                    input_dada = None
+                    data = None
 
                 return StreamingResponse(
-                    stream_result(func, input_dada),
+                    stream_result(func, data),
                     media_type="text/event-stream",
                     headers={
                         "Cache-Control": "no-cache",
