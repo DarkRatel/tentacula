@@ -27,16 +27,18 @@ def mask_protect_data(value: dict, hide_pass: bool = True) -> dict:
             if hide_pass and 'password' in k.lower():
                 value.update({k: '***'})
         elif isinstance(v, dict):
-            value.update({k: datetime_to_iso(v)})
+            value.update({k: encode_value(v)})
         else:
             value.update({k: v})
 
     return value
 
 
-def datetime_parser(value):
+def decode_value(value):
     """Функция конвертации даты полученной в виде строки в datetime"""
     if isinstance(value, str):
+        if value.startswith("hex:"):
+            return bytes.fromhex(value.lstrip("hex:"))
         try:
             # Если в строке есть прочерк, предполагается, что строка может быть датой в формате ISO,
             # поэтому производится попытка конвертации.
@@ -45,26 +47,28 @@ def datetime_parser(value):
         except ValueError:
             return value
     if isinstance(value, list):
-        return [datetime_parser(i) for i in value]
+        return [decode_value(i) for i in value]
     if isinstance(value, dict):
         for k, v in value.items():
-            value[k] = datetime_parser(v)
+            value[k] = decode_value(v)
         return value
     return value
 
 
-def datetime_to_iso(value):
+def encode_value(value):
     """Функция конвертации datetime в строку в формате ISO"""
+    if isinstance(value, bytes):
+        return f"hex:{value.hex()}"
     if isinstance(value, datetime):
         try:
             return datetime.isoformat(value)
         except ValueError:
             return value
     elif isinstance(value, list):
-        return [datetime_to_iso(i) for i in value]
+        return [encode_value(i) for i in value]
     elif isinstance(value, dict):
         for k, v in value.items():
-            value[k] = datetime_to_iso(v)
+            value[k] = encode_value(v)
         return value
     return value
 
@@ -442,21 +446,19 @@ class SDSHook:
                 raise e
 
             if isinstance(result['details'], list):
-                return [DSDict(datetime_parser(v)) if isinstance(v, dict) else v for v in result['details']]
+                return [DSDict(decode_value(v)) if isinstance(v, dict) else v for v in result['details']]
             else:
                 return result['details']
 
         # Обращение к СК через Шедуллер
         if self._type_conn == self.CONN_DB:
-            return datetime_parser(
-                request_db(
-                    _connect=self._connect_db, _logger=self._logger, db_table=self._db_table,
-                    timeout=self._timeout, type_query=type_query,
-                    param_conn=encode_param(self._public_key, mask_protect_data(self._param_conn, hide_pass=False)),
-                    param_query=encode_param(self._public_key, mask_protect_data(param_query, hide_pass=False)),
-                    pre_execution_delay=self._db_pre_execution_delay, execution_delay=self._db_execution_delay
-                )
-            )
+            return decode_value(request_db(
+                _connect=self._connect_db, _logger=self._logger, db_table=self._db_table,
+                timeout=self._timeout, type_query=type_query,
+                param_conn=encode_param(self._public_key, mask_protect_data(self._param_conn, hide_pass=False)),
+                param_query=encode_param(self._public_key, mask_protect_data(param_query, hide_pass=False)),
+                pre_execution_delay=self._db_pre_execution_delay, execution_delay=self._db_execution_delay
+            ))
         else:
             raise ValueError("Не удалось определить тип подключения")
 
