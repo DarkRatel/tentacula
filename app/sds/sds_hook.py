@@ -178,6 +178,11 @@ def request_db(_connect, _logger, db_table: str, timeout: int, pre_execution_del
                     raise TimeoutError("Время ожидания выполнения запроса истекло")
 
 
+def locals_value(data: dict) -> dict:
+    """Функция убирающая self из запроса и незаданные значения"""
+    return {k: v for k, v in data.items() if v is not None and k != 'self'}
+
+
 class SDSHook:
     # Указатели какой тип подключения будет использоваться
     CONN_DS = 1
@@ -481,14 +486,7 @@ class SDSHook:
         Returns:
             Список объектов из DS
         """
-
-        type_query = 'get_object'
-        param_query = {k: v for k, v in {'identity': identity, 'ldap_filter': ldap_filter, 'properties': properties,
-                                         'search_scope': search_scope, 'type_object': type_object,
-                                         'result_set_size': result_set_size}.items()
-                       if v is not None}
-
-        return self.query(type_query, param_query)
+        return self._query('get_object', locals_value(locals()))
 
     def get_user(
             self, identity: str | dict | DSDict = None, ldap_filter: str = None,
@@ -508,13 +506,7 @@ class SDSHook:
         Returns:
             Список объектов из DS
         """
-
-        type_query = 'get_user'
-        param_query = {k: v for k, v in {'identity': identity, 'ldap_filter': ldap_filter, 'properties': properties,
-                                         'search_scope': search_scope, 'result_set_size': result_set_size}.items()
-                       if v is not None}
-
-        return self.query(type_query, param_query)
+        return self._query('get_user', locals_value(locals()))
 
     def get_group(
             self, identity: str | dict | DSDict = None, ldap_filter: str = None,
@@ -534,13 +526,7 @@ class SDSHook:
         Returns:
             Список объектов из DS
         """
-
-        type_query = 'get_group'
-        param_query = {k: v for k, v in {'identity': identity, 'ldap_filter': ldap_filter, 'properties': properties,
-                                         'search_scope': search_scope, 'result_set_size': result_set_size}.items()
-                       if v is not None}
-
-        return self.query(type_query, param_query)
+        return self._query('get_group', locals_value(locals()))
 
     def get_computer(
             self, identity: str | dict | DSDict = None, ldap_filter: str = None,
@@ -560,13 +546,7 @@ class SDSHook:
         Returns:
             Список объектов из DS
         """
-
-        type_query = 'get_computer'
-        param_query = {k: v for k, v in {'identity': identity, 'ldap_filter': ldap_filter, 'properties': properties,
-                                         'search_scope': search_scope, 'result_set_size': result_set_size}.items()
-                       if v is not None}
-
-        return self.query(type_query, param_query)
+        return self._query('get_computer', locals_value(locals()))
 
     def get_contact(
             self, identity: str | dict | DSDict = None, ldap_filter: str = None,
@@ -586,13 +566,7 @@ class SDSHook:
         Returns:
             Список объектов из DS
         """
-
-        type_query = 'get_contact'
-        param_query = {k: v for k, v in {'identity': identity, 'ldap_filter': ldap_filter, 'properties': properties,
-                                         'search_scope': search_scope, 'result_set_size': result_set_size}.items()
-                       if v is not None}
-
-        return self.query(type_query, param_query)
+        return self._query('get_contact', locals_value(locals()))
 
     def get_group_member(self, identity: str | dict | DSDict) -> list[DSDict]:
         """
@@ -627,13 +601,7 @@ class SDSHook:
             display_name: Заполнение или изменение атрибута "displayName"
             description: Заполнение или изменение атрибута "description"
         """
-
-        type_query = 'set_object'
-        param_query = {k: v for k, v in
-                       {'identity': identity, 'remove': remove, 'add': add, 'replace': replace, 'clear': clear,
-                        'display_name': display_name, 'description': description}.items() if v is not None}
-
-        return self.query(type_query, param_query)
+        return self._query('set_object', locals_value(locals()))
 
     def set_user(self, identity: str | dict | DSDict,
                  remove: dict[str, list | bool | str] = None, add: dict[str, list | bool | str] = None,
@@ -661,18 +629,7 @@ class SDSHook:
             change_password_at_logon: Включение или отключение требования сменить пароль при входе.
             account_expiration_date: Указание даты или отключение срока действия пользователя.
         """
-
-        type_query = 'set_user'
-        param_query = {k: v for k, v in
-                       {'identity': identity, 'remove': remove, 'add': add, 'replace': replace, 'clear': clear,
-                        'display_name': display_name, 'description': description, 'sam_account_name': sam_account_name,
-                        'user_principal_name': user_principal_name, 'enabled': enabled,
-                        'password_never_expires': password_never_expires,
-                        'account_not_delegated': account_not_delegated,
-                        'change_password_at_logon': change_password_at_logon,
-                        'account_expiration_date': account_expiration_date}.items() if v is not None}
-
-        return self.query(type_query, param_query)
+        return self._query('set_user', locals_value(locals()))
 
     def set_group(self, identity: str | dict | DSDict,
                   remove: dict[str, list | bool | str] = None, add: dict[str, list | bool | str] = None,
@@ -694,14 +651,7 @@ class SDSHook:
             group_scope: Изменение области работы группы.
             group_category: Изменение категории группы.
         """
-
-        type_query = 'set_group'
-        param_query = {k: v for k, v in
-                       {'identity': identity, 'remove': remove, 'add': add, 'replace': replace, 'clear': clear,
-                        'display_name': display_name, 'description': description, 'sam_account_name': sam_account_name,
-                        'group_scope': group_scope, 'group_category': group_category}.items() if v is not None}
-
-        return self.query(type_query, param_query)
+        return self._query('set_group', locals_value(locals()))
 
     def set_computer(self, identity: str | dict | DSDict,
                      remove: dict[str, list | bool | str] = None, add: dict[str, list | bool | str] = None,
@@ -719,13 +669,7 @@ class SDSHook:
             display_name: Заполнение или изменение атрибута "displayName".
             description: Заполнение или изменение атрибута "description".
         """
-
-        type_query = 'set_computer'
-        param_query = {k: v for k, v in
-                       {'identity': identity, 'remove': remove, 'add': add, 'replace': replace, 'clear': clear,
-                        'display_name': display_name, 'description': description}.items() if v is not None}
-
-        return self.query(type_query, param_query)
+        return self._query('set_computer', locals_value(locals()))
 
     def set_contact(self, identity: str | dict | DSDict,
                     remove: dict[str, list | bool | str] = None, add: dict[str, list | bool | str] = None,
@@ -743,13 +687,7 @@ class SDSHook:
             display_name: Заполнение или изменение атрибута "displayName"
             description: Заполнение или изменение атрибута "description"
         """
-
-        type_query = 'set_contact'
-        param_query = {k: v for k, v in
-                       {'identity': identity, 'remove': remove, 'add': add, 'replace': replace, 'clear': clear,
-                        'display_name': display_name, 'description': description}.items() if v is not None}
-
-        return self.query(type_query, param_query)
+        return self._query('set_contact', locals_value(locals()))
 
     def set_account_password(self, identity: str | dict | DSDict, account_password: str) -> None:
         """
@@ -759,12 +697,7 @@ class SDSHook:
             identity: Аргумент принимающий уникальные атрибуты пользователя для идентификации (distinguishedName, objectGUID, objectSid, sAMAccountName или словарь объекта DS (DSDict)).
             account_password: Новый пароль.
         """
-
-        type_query = 'set_account_password'
-        param_query = {k: v for k, v in {'identity': identity, 'account_password': account_password}.items()
-                       if v is not None}
-
-        return self.query(type_query, param_query)
+        return self._query('set_account_password', locals_value(locals()))
 
     def set_account_unlock(self, identity: str | dict | DSDict) -> None:
         """
@@ -773,11 +706,7 @@ class SDSHook:
         Args:
             identity: Аргумент принимающий уникальные атрибуты пользователя для идентификации.
         """
-
-        type_query = 'set_account_unlock'
-        param_query = {k: v for k, v in {'identity': identity}.items() if v is not None}
-
-        return self.query(type_query, param_query)
+        return self._query('set_account_unlock', locals_value(locals()))
 
     def add_group_member(self, identity: str | dict | DSDict,
                          members: str | dict | DSDict | list[str] | tuple[str] | list[DSDict]) -> None:
@@ -788,11 +717,7 @@ class SDSHook:
             identity: Аргумент принимающий уникальные атрибуты пользователя для идентификации (distinguishedName, objectGUID, objectSid, sAMAccountName или словарь объекта DS (DSDict)).
             members: Аргумент принимающий уникальные атрибуты члена/членов группы (distinguishedName, objectGUID, objectSid, sAMAccountName или словарь объекта DS (DSDict)).
         """
-
-        type_query = 'add_group_member'
-        param_query = {k: v for k, v in {'identity': identity, 'members': members}.items() if v is not None}
-
-        return self.query(type_query, param_query)
+        return self._query('add_group_member', locals_value(locals()))
 
     def remove_group_member(self, identity: str | dict | DSDict,
                             members: str | dict | DSDict | list[str] | tuple[str] | list[DSDict]) -> None:
@@ -803,11 +728,7 @@ class SDSHook:
             identity: Аргумент принимающий уникальные атрибуты пользователя для идентификации (distinguishedName, objectGUID, objectSid, sAMAccountName или словарь объекта DS (DSDict)).
             members: Аргумент принимающий уникальные атрибуты члена/членов группы (distinguishedName, objectGUID, objectSid, sAMAccountName или словарь объекта DS (DSDict)).
         """
-
-        type_query = 'remove_group_member'
-        param_query = {k: v for k, v in {'identity': identity, 'members': members}.items() if v is not None}
-
-        return self.query(type_query, param_query)
+        return self._query('remove_group_member', locals_value(locals()))
 
     def move_object(self, identity: str | dict | DSDict, target_path: str) -> None:
         """
@@ -818,11 +739,7 @@ class SDSHook:
             identity: Аргумент принимающий уникальные атрибуты пользователя для идентификации (distinguishedName, objectGUID, objectSid или словарь объекта DS (DSDict)).
             target_path: Аргумент принимающий distinguishedName нового Организационного юнита
         """
-
-        type_query = 'move_object'
-        param_query = {k: v for k, v in {'identity': identity, 'target_path': target_path}.items() if v is not None}
-
-        return self.query(type_query, param_query)
+        return self._query('move_object', locals_value(locals()))
 
     def rename_object(self, identity: str | dict | DSDict, new_name: str) -> None:
         """
@@ -832,11 +749,7 @@ class SDSHook:
             identity: Аргумент принимающий уникальные атрибуты пользователя для идентификации (distinguishedName, objectGUID, objectSid или словарь объекта DS (DSDict)).
             new_name: Аргумент принимающий новое имя
         """
-
-        type_query = 'rename_object'
-        param_query = {k: v for k, v in {'identity': identity, 'new_name': new_name}.items() if v is not None}
-
-        return self.query(type_query, param_query)
+        return self._query('rename_object', locals_value(locals()))
 
     def new_user(self, path: str, name: str, sam_account_name: str, account_password: str, display_name: str = None,
                  user_principal_name: str = None, enabled: bool = None, password_never_expires: bool = None,
@@ -860,18 +773,7 @@ class SDSHook:
                 account_expiration_date: Указывание даты исчезания пользователя, либо отключение параметра (False)
                 other_attributes: Словарь с дополнительными атрибутами
             """
-
-        type_query = 'new_user'
-        param_query = {k: v for k, v in {'path': path, 'name': name, 'sam_account_name': sam_account_name,
-                                         'account_password': account_password, 'display_name': display_name,
-                                         'user_principal_name': user_principal_name, 'enabled': enabled,
-                                         'password_never_expires': password_never_expires,
-                                         'account_not_delegated': account_not_delegated,
-                                         'change_password_at_logon': change_password_at_logon,
-                                         'account_expiration_date': account_expiration_date,
-                                         'other_attributes': other_attributes}.items() if v is not None}
-
-        return self.query(type_query, param_query)
+        return self._query('new_user', locals_value(locals()))
 
     def new_group(self, path: str, name: str, sam_account_name: str, display_name: str = None,
                   group_scope: DS_GROUP_SCOPE = 'Global', group_category: DS_GROUP_CATEGORY = 'Security',
@@ -888,14 +790,7 @@ class SDSHook:
                 group_category: Указатель категории группы ("Security" (по умолчанию) или "Distribution")
                 other_attributes: Словарь с дополнительными атрибутами
         """
-
-        type_query = 'new_group'
-        param_query = {k: v for k, v in
-                       {'path': path, 'name': name, 'sam_account_name': sam_account_name, 'display_name': display_name,
-                        'group_scope': group_scope, 'group_category': group_category,
-                        'other_attributes': other_attributes}.items() if v is not None}
-
-        return self.query(type_query, param_query)
+        return self._query('new_group', locals_value(locals()))
 
     def new_contact(self, path: str, name: str, display_name: str = None,
                     other_attributes: dict[str, list] = None) -> None:
@@ -908,10 +803,7 @@ class SDSHook:
                 display_name: Выводимое имя пользователя (displayName)
                 other_attributes: Словарь с дополнительными атрибутами
         """
-
-        type_query = 'new_contact'
-        param_query = {k: v for k, v in {'path': path, 'name': name, 'display_name': display_name,
-                                         'other_attributes': other_attributes}.items() if v is not None}
+        return self._query('new_contact', locals_value(locals()))
 
         return self.query(type_query, param_query)
 
@@ -923,11 +815,7 @@ class SDSHook:
                 identity: Аргумент принимающий уникальные атрибуты пользователя для идентификации (distinguishedName, objectGUID, objectSid или словарь объекта DS (DSDict)).
                 type_object: К фильтру поиска добавляется фильтр типа объекта ("object", "user", "group", "computer" или "contact")
         """
-
-        type_query = 'remove_object'
-        param_query = {k: v for k, v in {'identity': identity, 'type_object': type_object}.items() if v is not None}
-
-        return self.query(type_query, param_query)
+        return self._query('remove_object', locals_value(locals()))
 
     def remove_user(self, identity: str | dict | DSDict) -> None:
         """
@@ -936,11 +824,7 @@ class SDSHook:
             Args:
                 identity: Аргумент для поиска только одного объекта в каталоге (distinguishedName, objectGUID, objectSid, sAMAccountName или словарь объекта DS (DSDict))
         """
-
-        type_query = 'remove_user'
-        param_query = {k: v for k, v in {'identity': identity}.items() if v is not None}
-
-        return self.query(type_query, param_query)
+        return self._query('remove_user', locals_value(locals()))
 
     def remove_group(self, identity: str | dict | DSDict) -> None:
         """
@@ -949,11 +833,7 @@ class SDSHook:
             Args:
                 identity: Аргумент для поиска только одного объекта в каталоге (distinguishedName, objectGUID, objectSid, sAMAccountName или словарь объекта DS (DSDict))
         """
-
-        type_query = 'remove_group'
-        param_query = {k: v for k, v in {'identity': identity}.items() if v is not None}
-
-        return self.query(type_query, param_query)
+        return self._query('remove_group', locals_value(locals()))
 
     def remove_computer(self, identity: str | dict | DSDict) -> None:
         """
@@ -962,11 +842,7 @@ class SDSHook:
             Args:
                 identity: Аргумент для поиска только одного объекта в каталоге (distinguishedName, objectGUID, objectSid, sAMAccountName или словарь объекта DS (DSDict))
         """
-
-        type_query = 'remove_computer'
-        param_query = {k: v for k, v in {'identity': identity}.items() if v is not None}
-
-        return self.query(type_query, param_query)
+        return self._query('remove_computer', locals_value(locals()))
 
     def remove_contact(self, identity: str | dict | DSDict) -> None:
         """
@@ -975,8 +851,4 @@ class SDSHook:
             Args:
                 identity: Аргумент для поиска только одного объекта в каталоге (distinguishedName, objectGUID, objectSid или словарь объекта DS (DSDict))
         """
-
-        type_query = 'remove_contact'
-        param_query = {k: v for k, v in {'identity': identity}.items() if v is not None}
-
-        return self.query(type_query, param_query)
+        return self._query('remove_contact', locals_value(locals()))
