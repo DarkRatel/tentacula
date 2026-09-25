@@ -48,7 +48,7 @@ def kinit_keytab(login: str, keytab: str):
 
 class DSHook:
     def __init__(self, host: str | list[str], login: str, password: str = None, keytab: str = None,
-                 port: int = 636, base: str = None, dry_run: bool = False, log_level: int = logging.INFO) -> None:
+                 port: int = 636, base: str = None, dry_run: bool = False, log_level: int = None) -> None:
         """
         Класс создаёт сессию с DS, в рамках который будет исполнен запрос к каталогу
         (запрос описывается в рамках наследованных функций).
@@ -83,8 +83,7 @@ class DSHook:
         # Создание уникального имени для логов
         self._logger = logging.getLogger(self.__class__.__name__)
 
-        if log_level:
-            self._logger.setLevel(log_level)
+        self._logger.setLevel(log_level or logging.INFO)
 
     def __enter__(self):
         """Автоматическое открытие сессии"""
