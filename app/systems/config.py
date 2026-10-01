@@ -127,6 +127,9 @@ class _AppConfig:
         self.APP__LOGS_FOLDER = _read_any(config=_config, chapter='app', name='LOGS_FOLDER').rstrip("/")
         os.makedirs(self.APP__LOGS_FOLDER, exist_ok=True)
 
+        self.APP__LOGS_JSON = _read_bool(config=_config, chapter='app', name='LOGS_JSON', default=False)
+        self.APP__LOGS_API_ENABLED = _read_bool(config=_config, chapter='app', name='LOGS_API_ENABLED', default=False)
+
         self.APP__DB_ASYNC_URL = _read_any(config=_config, chapter='app', name='DB_ASYNC_URL', default=False)
         if self.APP__DB_ASYNC_URL:
             self.APP__DB_ASYNC_URL = _read_file(self.APP__DB_ASYNC_URL)

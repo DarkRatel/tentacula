@@ -1,5 +1,6 @@
 import os
 import sys
+import logging
 import importlib
 
 from fastapi import FastAPI, Request
@@ -8,10 +9,12 @@ from jinja2 import Template
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from app.systems.config import AppConfig
-from app.systems.logging import logger, s_id_ctx_var, setup_logging
+from app.systems.logging import session_id_ctx_var, setup_logging
 
-# Настройка root'ового logging, для перехвата всех данных выводимых в логгер
+# Настройка root'ового logging, для перехвата всех данных выводимых в логи
 setup_logging()
+
+logger = logging.getLogger(__name__)
 
 # Если в конфигурации есть запуск SCHEDULERS, то инициализируется приложение
 if any([AppConfig.SCHEDULERS__ENABLED, AppConfig.SCHEDULERS_DS__ENABLED]):
@@ -27,10 +30,10 @@ if any([AppConfig.SCHEDULERS__ENABLED, AppConfig.SCHEDULERS_DS__ENABLED]):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info(f"  COMPOSITION__ENABLED: {AppConfig.COMPOSITION__ENABLED}")
-    logger.info(f"      SUCKERS__ENABLED: {AppConfig.SUCKERS__ENABLED}")
-    logger.info(f"   SUCKERS_DS__ENABLED: {AppConfig.SUCKERS_DS__ENABLED}")
-    logger.info(f"   SCHEDULERS__ENABLED: {AppConfig.SCHEDULERS__ENABLED}")
+    logger.info(f"COMPOSITION__ENABLED: {AppConfig.COMPOSITION__ENABLED}")
+    logger.info(f"SUCKERS__ENABLED: {AppConfig.SUCKERS__ENABLED}")
+    logger.info(f"SUCKERS_DS__ENABLED: {AppConfig.SUCKERS_DS__ENABLED}")
+    logger.info(f"SCHEDULERS__ENABLED: {AppConfig.SCHEDULERS__ENABLED}")
     logger.info(f"SCHEDULERS_DS__ENABLED: {AppConfig.SCHEDULERS_DS__ENABLED}")
 
     # Блок настройки NGINX-файла
@@ -44,6 +47,7 @@ async def lifespan(app: FastAPI):
         with open(f"{os.getcwd()}/app/nginx/nginx.conf.j2", "r") as f:
             template = Template(f.read()).render(
                 logs_folder=AppConfig.WEB__LOGS_FOLDER,
+                json_log=AppConfig.APP__LOGS_JSON,
                 port=AppConfig.WEB__PORT,
                 http_block=AppConfig.WEB__HTTP_BLOCK,
                 ssl_enabled=ssl_enabled,
@@ -87,15 +91,8 @@ app = FastAPI(lifespan=lifespan)
 @app.middleware("http")
 async def system_middleware(request: Request, call_next):
     # Сохранение уникального кода сессии в контекст, для добавления в логи
-    s_id_ctx_var.set(request.headers["x-request-id"])
+    session_id_ctx_var.set(request.headers["x-request-id"])
     response = await call_next(request)
-
-    logger.info(f"Protocol: {request.headers['x-forwarded-proto'].upper()}, "
-                f"Host name: {request.headers['host']}, "
-                f"Host ip: {request.headers['x-server-ip']}, "
-                f"URL: {request.url}, "
-                f"Client ip: {request.headers.get('x-forwarded-for')}")
-
     return response
 
 
@@ -103,6 +100,12 @@ async def system_middleware(request: Request, call_next):
 from app.sites.root import router_root
 
 app.include_router(router_root)
+
+# Импорт эндпоинта возвращения логов
+if AppConfig.APP__LOGS_API_ENABLED:
+    from app.sites.logs import router_logs
+
+    app.include_router(router_logs)
 
 # Импорт пользовательских Присосок, если включено
 if AppConfig.SUCKERS__ENABLED:
