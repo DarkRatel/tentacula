@@ -1,4 +1,5 @@
 import json
+import logging
 import uuid
 import base64
 from datetime import datetime, timezone, timedelta
@@ -11,11 +12,14 @@ from sqlalchemy import Column, Integer, String, DateTime, JSON, select, func, de
 
 from app.sds import SDSHook
 from app.systems.config import AppConfig
-from app.systems.logging import logger, s_id_ctx_var
+from app.systems.logging import session_id_ctx_var, event_id_ctx_var
+from app.systems.log_event import Event
 from app.systems.database import Base
-from app.moduls.json_encoder import json_encoder
+from app.moduls.json_convert import json_encoder
 from app.systems.database import AsyncSessionLocal
 from app.main import scheduler
+
+logger = logging.getLogger("scheduler.ds")
 
 # Переменная для отслеживания заданий работающих в фоновом режиме
 background_tasks: set[asyncio.Task] = set()
@@ -31,9 +35,9 @@ def track_background_task(task: asyncio.Task) -> None:
         try:
             t.result()
         except asyncio.CancelledError:
-            logger.warning("Background task was cancelled")
+            logging.warning({'msg': 'Background task was cancelled', 'e_id': Event.SHED_CANCELLED_ERROR})
         except Exception:
-            logger.exception("Background task failed")
+            logging.exception({'msg': 'Background task failed', 'e_id': Event.SHED_EXCEPTION})
 
     task.add_done_callback(_done_callback)
 
@@ -86,7 +90,7 @@ def decode_param(param) -> dict:
 
 def run_ds(uuid_session, type_query, param_conn, param_query):
     """Функция исполнения запроса к СК"""
-    s_id_ctx_var.set(uuid_session)
+    session_id_ctx_var.set(uuid_session)
     with SDSHook(**param_conn) as ds:
         result = getattr(ds, type_query)(**param_query)
         return result
@@ -95,9 +99,10 @@ def run_ds(uuid_session, type_query, param_conn, param_query):
 async def task_processing(source_uuid: str, task_id: int):
     """Функция исполнения выбранного задания. В ID события добавляется ID строки из таблицы заданий"""
     uuid_session = f"{source_uuid}-{task_id}"
-    s_id_ctx_var.set(uuid_session)
+    session_id_ctx_var.set(uuid_session)
+    event_id_ctx_var.set("scheduler.ds.task_processing")
 
-    logger.info(f"====Start task id: %s====", task_id)
+    logging.debug(f"====Start task id: %s====", task_id)
 
     # Подключение к БД
     async with AsyncSessionLocal() as db:
@@ -112,8 +117,8 @@ async def task_processing(source_uuid: str, task_id: int):
             param_conn = decode_param(task.param_conn)
             param_query = decode_param(task.param_query)
 
-            logger.info('Original Query: %s, Param Connect: %s, Param Query: %s',
-                        type_query, param_conn, param_query)
+            logging.info({'msg': 'Original Param', 'query': type_query, 'param_connect': param_conn,
+                          'param_query': param_query}, extra={'e_id': Event.SHED_PARAM_CONNECT})
 
             # Изменение входных параметров, если такое описано в TRANSIT
             # Данные пришедшие в задание из таблицы более приоритетные
@@ -122,7 +127,8 @@ async def task_processing(source_uuid: str, task_id: int):
                 param_conn['host'] = transit['host']
                 param_conn.update({k: v for k, v in transit.items() if not param_conn.get(k)})
 
-                logger.info('Transit Param Connect: %s', param_conn)
+                logging.info({'msg': 'Transit Param', 'param_connect': param_conn},
+                             extra={'e_id': Event.SHED_PARAM_CONNECT})
 
             # Исполнение запроса
             result = await asyncio.to_thread(
@@ -135,7 +141,7 @@ async def task_processing(source_uuid: str, task_id: int):
             await db.commit()
         except Exception as e:
             e = str(e)
-            logger.info(f"Error : %s", e)
+            logging.info({'msg': f"Error : {e}"}, extra=Event.SHED_FORMATION_TASK)
 
             async with AsyncSessionLocal() as db:
                 task = (
@@ -146,21 +152,22 @@ async def task_processing(source_uuid: str, task_id: int):
                 task.result = e
                 await db.commit()
 
-            logger.info(f"====End====")
+            logging.debug(f"====End====")
 
             raise
 
-        logger.info(f"====End====")
+        logging.debug(f"====End====")
 
 
 async def scheduler_ds_tasker():
     """Функция поиска заданий в таблице и создания отдельного события для каждого задания"""
     # Создание строки сессии
     source_uuid = str(uuid.uuid4())
-    s_id_ctx_var.set(source_uuid)
+    session_id_ctx_var.set(source_uuid)
+    event_id_ctx_var.set("scheduler.ds.ds_tasker")
 
     if background_tasks:
-        logger.info("Active background tasks: %s", len(background_tasks))
+        logging.info("Active background tasks: %s", len(background_tasks))
 
     for _ in range(AppConfig.SCHEDULERS_DS__POLLING_ATTEMPTS):
         task_ids = None
@@ -182,7 +189,7 @@ async def scheduler_ds_tasker():
 
                 task_ids = [task.id for task in tasks]
 
-                logger.info(f"New tasks id for run: %s", task_ids)
+                logging.info(f"New tasks id for run: %s", task_ids)
 
         if task_ids:
             # Для всех найденных заданий формирование задания для исполнения на заднем фоне
@@ -205,7 +212,8 @@ scheduler.add_job(scheduler_ds_tasker, "interval", seconds=seconds,
 async def scheduler_ds_cleaning():
     """Функция очистки таблицы от неактуальных заданий"""
     # Создание строки сессии
-    s_id_ctx_var.set(str(uuid.uuid4()))
+    session_id_ctx_var.set(str(uuid.uuid4()))
+    event_id_ctx_var.set("scheduler.ds.cleaning_table")
 
     async with AsyncSessionLocal() as db:
         await db.execute(delete(Tasker).where(Tasker.created_at < func.now() - timedelta(hours=1)))
