@@ -1,10 +1,13 @@
+import logging
+
 from fastapi import APIRouter
 from pydantic import BaseModel
 import httpx, ssl
 
-from app.systems.logging import logger
 from app.moduls.post_base import create_post
 from app.systems.config import AppConfig
+
+logger = logging.getLogger("composition")
 
 router_composition = APIRouter()
 
@@ -17,9 +20,7 @@ class SpecData(BaseModel):
 
 def composition(url_: str, path_: str, json_: dict):
     """Сочленение позволяет обратиться через Тентаклю"""
-    logger.info("Original URL: %s", url_)
-    logger.info("Original Path: %s", path_)
-    logger.info("Original Data: %s", json_)
+    logging.info({'msg': 'Original Data', 'url': url_, 'path': path_, 'data': json_})
 
     transport = httpx.HTTPTransport()
 
@@ -39,12 +40,12 @@ def composition(url_: str, path_: str, json_: dict):
 
         if 'url_' in transit:
             url_ = transit['url_']
-            logger.info("Transit URL: %s", url_)
+            logging.info({'msg': 'Transit URL', 'url': url_})
 
         if 'json_' in transit:
             for k, v in transit['json_'].items():
                 json_[k] = v
-            logger.info("Transit Data: %s", json_)
+            logging.info({'msg': 'Transit Data', 'data': json_})
 
     url_ = [url_] if isinstance(url_, str) else url_
 
@@ -58,11 +59,11 @@ def composition(url_: str, path_: str, json_: dict):
             if not data['error']:
                 return data['details']
             else:
-                logger.error(f'Error: {data["details"]}')
+                logging.error(f'Error: {data["details"]}')
                 raise RuntimeError("Error answer in TRANSIT")
 
         except httpx.ConnectError as e:
-            logger.warning(f"Host {url}: {e}")
+            logging.warning(f"Host {url}: {e}", )
 
     return None
 
