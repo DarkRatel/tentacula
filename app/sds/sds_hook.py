@@ -16,8 +16,19 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives import serialization
 
-from app.ds import DSHook, DSDict
+from app.ds import DSHook, DSDict, Event
 from app.ds import DS_TYPE_SCOPE, DS_TYPE_OBJECT, DS_GROUP_SCOPE, DS_GROUP_CATEGORY
+
+
+class MergingLoggerAdapter(logging.LoggerAdapter):
+    """Функция для объединения расширенных переменных из адаптера и строки события, для совместимости с Python ≤ 3.12"""
+
+    def process(self, msg, kwargs):
+        kwargs["extra"] = {
+            **self.extra,
+            **kwargs.get("extra", {}),
+        }
+        return msg, kwargs
 
 
 def mask_protect_data(value: dict, hide_pass: bool = True) -> dict:
@@ -104,8 +115,8 @@ def encode_param(_public_key, param: dict):
     ).decode('utf-8')
 
 
-def request_db(_connect, _logger, db_table: str, timeout: int, pre_execution_delay: int, execution_delay: int,
-               type_query, param_conn, param_query):
+def request_db(_connect, _logger: logging.LoggerAdapter, db_table: str, timeout: int, pre_execution_delay: int,
+               execution_delay: int, type_query, param_conn, param_query):
     """
     Функция формирования задания для таблицы и получения ответа.
     Актуально для обращений через таблицу заданий и Шедуллер
@@ -130,7 +141,7 @@ def request_db(_connect, _logger, db_table: str, timeout: int, pre_execution_del
                 f" VALUES ('waiting', '{type_query}', '{param_conn}', '{param_query}') RETURNING id"
             )
             query_id = cur.fetchone()[0]
-            _logger.info(f"Task query_id = {query_id}")
+            _logger.info({'msg': 'Task in DS', 'id': query_id}, extra={'e_id': Event.TENT_QUERY_ID})
 
     dt_start = datetime.now()
     dt_timeout = dt_start + timedelta(seconds=timeout)
@@ -190,7 +201,7 @@ class SDSHook:
     CONN_DB = 3
 
     def __init__(self, login: str = None, password: str = None, host: str | list[str] = None, port: int = 636,
-                 base: str = None, dry_run: bool = False, log_level: int = logging.INFO, public_key: str = None,
+                 base: str = None, dry_run: bool = False, log_level: int = None, public_key: str = None,
                  timeout: int = 180, db_login: str = None, db_password: str = None, db_host: str = None,
                  db_port: int = 5432, database: str = None, db_pre_execution_delay: float = 0.1,
                  db_execution_delay: float = 0.1, url: str | list = None, cert_root: str = None, cert_file: str = None,
@@ -307,10 +318,8 @@ class SDSHook:
         self._tent_pass = tent_pass
 
         # Создание уникального имени для логов
-        self._logger = logging.getLogger(self.__class__.__name__)
-
-        if log_level:
-            self._logger.setLevel(self._log_level)
+        self._logger = MergingLoggerAdapter(logging.getLogger(self.__class__.__name__), extra={"u_id": self._login})
+        self._logger.setLevel(log_level or logging.INFO)
 
         self._param_conn = {k: v for k, v in
                             {'login': self._login, 'password': self._password, 'host': self._host, 'port': self._port,
@@ -396,12 +405,10 @@ class SDSHook:
             self._param_conn['base'] = self.base
 
         # copy используется, чтобы не изменилось оригинальное значение при формировании строки подходящей для логов
-        self._logger.info(
-            f"Endpoint: %s, Conn Params: %s, Query Params: %s",
-            type_query,
-            mask_protect_data(copy(self._param_conn), hide_pass=True),
-            mask_protect_data(copy(param_query), hide_pass=True)
-        )
+        self._logger.info({'msg': 'Tent query', 'endpoint': type_query,
+                           'conn_params': mask_protect_data(copy(self._param_conn), hide_pass=True),
+                           'query_params': mask_protect_data(copy(param_query), hide_pass=True)},
+                          extra={'e_id': Event.TENT_QUERY_PARAM})
 
         # Обращение к СК через Тентаклю
         if self._type_conn == self.CONN_TENT:
@@ -410,7 +417,7 @@ class SDSHook:
                 try:
                     url = f'{url}/{type_query}'
 
-                    auth_data = [f"Run URL Connect: {url}"]
+                    auth_data = {'msg': 'Query to endpoint', 'url': url}
 
                     # Если был указан сертификат для подключения, его данные будут добавлены в логи
                     if self._cert_file:
@@ -420,13 +427,13 @@ class SDSHook:
                         cert = x509.load_pem_x509_certificate(cert_data, default_backend())
                         cn = cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
 
-                        auth_data.append(f"Client cert Subject: 'CN={cn}', Client cert Serial: {cert.serial_number}")
+                        auth_data.update({'cn': cn, 'serial': cert.serial_number})
 
                     # Если был указан логин для авторизации на Тентакле
                     if self._tent_login:
-                        auth_data.append(f"Tent login: {self._tent_login}")
+                        auth_data.update({'tent_login': self._tent_login})
 
-                    self._logger.info(', '.join(auth_data))
+                    self._logger.info(auth_data, extra={'e_id': Event.TENT_QUERY_ENDPOINT})
 
                     response = self._connect_tent.post(url, json={
                         **mask_protect_data(self._param_conn, hide_pass=False),
@@ -435,7 +442,7 @@ class SDSHook:
 
                     break
                 except httpx.ConnectError as e:
-                    self._logger.warning(f"Host {url}: {e}")
+                    self._logger.warning(f"Host {url}: {e}", extra={'e_id': Event.TENT_ENDPOINT_ERROR})
 
             else:
                 raise TimeoutError(f"Can't contact HTTP servers")
@@ -447,7 +454,7 @@ class SDSHook:
                 if result['error']:
                     raise RuntimeError(result['details'])
             except Exception as e:
-                self._logger.info(response.text)
+                self._logger.warning(response.text, extra={'e_id': Event.TENT_ENDPOINT_ERROR_ANSWER})
                 raise e
 
             if isinstance(result['details'], list):
