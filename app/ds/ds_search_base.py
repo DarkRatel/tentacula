@@ -1,10 +1,13 @@
 """
 Функция для формирования base-строки. Основное применение, если в строке не найдены
 """
+import logging
+
 import ldap
+from .data import Event
 
 
-def search_root_dse(connect, _logger) -> str:
+def search_root_dse(connect, _logger: logging.LoggerAdapter) -> str:
     """
     Функция формирования base-строки подключения
 
@@ -17,8 +20,9 @@ def search_root_dse(connect, _logger) -> str:
     ldap_filter = "(objectClass=*)"
     properties = ["namingContexts"]
 
-    _logger.debug(f"Get dn: search_base: {base}, search_scope: {search_scope}, "
-                  f"ldap_filter: {ldap_filter}, properties: {properties}")
+    _logger.debug({'msg': 'Get domain DN', 'search_base': base, 'search_scope': search_scope,
+                   'ldap_filter': ldap_filter, 'properties': properties},
+                  extra={'e_id': Event.QUERY_GET_ROOTDSE})
 
     # Получения списка корневых областей
     res = connect.search_s(base, search_scope, ldap_filter, properties)

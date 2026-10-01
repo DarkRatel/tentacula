@@ -1,14 +1,15 @@
 """
 Функция изменения членства в группе СК
 """
+import logging
 import ldap
 
-from .data import DS_ACTION_MEMBER
+from .data import DS_ACTION_MEMBER, Event
 from .ds_dict import DSDict
 from .func_ds_get import search_object, gen_filter_to_id
 
 
-def ds_set_member(connect, _logger, dry_run: bool, base: str,
+def ds_set_member(connect, _logger: logging.LoggerAdapter, dry_run: bool, base: str,
                   identity: str | DSDict, members: str | list, action: DS_ACTION_MEMBER = None) -> None:
     """
     Изменение членства в группе.
@@ -80,7 +81,8 @@ def ds_set_member(connect, _logger, dry_run: bool, base: str,
             )[0]
             members_id.append(s_object['distinguishedName'])
 
-    _logger.debug(f"{action.capitalize()} member: DN: {identity['distinguishedName']}, Members: {members_id}")
+    _logger.debug({'msg': f"{action.capitalize()} member", 'dn': identity['distinguishedName'], 'member': members_id},
+                  extra={'e_id': Event.DEBUG})
 
     # Перебор ID членов для внесения правок по каждому
     for m_id in members_id:
@@ -98,14 +100,17 @@ def add_member(connect, _logger, group: str, member: str, dry_run: bool):
         group: ID группы
         member: ID объекта
     """
-    _logger.info(f"Add member: DN: {group}, Operation: {ldap.MOD_ADD}, Member: {member}")
+
+    _logger.info({'msg': f"Add member", 'dn': group, 'operation': ldap.MOD_ADD, 'member': member},
+                 extra={'e_id': Event.QUERY_ADD_MEMBER})
+
     if not dry_run:
         try:
             connect.modify_s(group, [(ldap.MOD_ADD, 'member', [member.encode("utf-8")])])
         except ldap.ALREADY_EXISTS:
-            _logger.debug("Object already in group")
+            _logger.debug("Object already in group", extra={'e_id': Event.DEBUG})
     else:
-        _logger.warning("Enabled dry run")
+        _logger.warning({'msg': 'Enabled dry run'}, extra={'e_id': Event.QUERY_ADD_MEMBER})
 
 
 def remove_member(connect, _logger, group: str, member: str, dry_run: bool):
@@ -123,13 +128,16 @@ def remove_member(connect, _logger, group: str, member: str, dry_run: bool):
         group: ID группы
         member: ID объекта
     """
-    _logger.info(f"Remove member: DN: {group}, Operation: {ldap.MOD_DELETE}, Member: {member}")
+
+    _logger.info({'msg': f"Remove member", 'dn': group, 'operation': ldap.MOD_DELETE, 'member': member},
+                 extra={'e_id': Event.QUERY_REMOVE_MEMBER})
+
     if not dry_run:
         try:
             connect.modify_s(group, [(ldap.MOD_DELETE, 'member', [member.encode("utf-8")])])
         except ldap.NO_SUCH_ATTRIBUTE:
-            _logger.debug("User not found in group")
+            _logger.debug("User not found in group", extra={'e_id': Event.DEBUG})
         except ldap.UNWILLING_TO_PERFORM:
-            _logger.warning("UNWILLING_TO_PERFORM - Object not in group")
+            _logger.warning("UNWILLING_TO_PERFORM - Object not in group", extra={'e_id': Event.UNWILLING_TO_PERFORM})
     else:
-        _logger.warning("Enabled dry run")
+        _logger.warning({'msg': 'Enabled dry run'}, extra={'e_id': Event.QUERY_REMOVE_MEMBER})

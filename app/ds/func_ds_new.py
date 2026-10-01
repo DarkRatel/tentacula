@@ -5,13 +5,15 @@
 Есть существенное отличие обработки специальных параметров (их обработка происходит в не функции)
 Поскольку при создании не требуется сперва получать исходный объект, поэтому есть отличия от изменения объектов
 """
+import logging
 import ldap
 
-from .data import DS_TYPE_OBJECT
+from .data import DS_TYPE_OBJECT, Event
 from .convertors_value import convert_object_class, convert_value
 
 
-def ds_new(connect, _logger, dry_run: bool, type_object: DS_TYPE_OBJECT, path: str, name: str, display_name: str = None,
+def ds_new(connect, _logger: logging.LoggerAdapter, dry_run: bool, type_object: DS_TYPE_OBJECT, path: str, name: str,
+           display_name: str = None,
            extend: dict[str, list | bool] = None, other_attributes: dict[str, list | str | bool] = None) -> None:
     """
     Функция создания объекта в СК
@@ -53,8 +55,9 @@ def ds_new(connect, _logger, dry_run: bool, type_object: DS_TYPE_OBJECT, path: s
                     raise ValueError(f"Атрибут {key} уже был определён. Удалите его из other_attributes")
             list_object.append((key, convert_value(key, value)))
 
-    _logger.info(f"New {type_object}: DN: {dn}, "
-                 f"value: {[(k, ['***'] if k.lower() == 'unicodepwd' else v) for k, v in list_object]}")
+    _logger.info({'msg': f"New {type_object}",
+                  'value': [(k, ['***'] if k.lower() == 'unicodepwd' else v) for k, v in list_object]},
+                 extra={'e_id': Event.QUERY_NEW_OBJECT})
 
     # Перебор всех значений для проверки являются ли они списком и конвертация в UTF
     for index, (key, values) in enumerate(list_object):
@@ -66,10 +69,11 @@ def ds_new(connect, _logger, dry_run: bool, type_object: DS_TYPE_OBJECT, path: s
         else:
             list_object[index] = (key, [v if isinstance(v, bytes) else v.encode("utf-8") for v in values])
 
-    _logger.debug(f"New {type_object}: DN: {dn}, "
-                  f"value: {[(k, ['***'] if k.lower() == 'unicodepwd' else v) for k, v in list_object]}")
+    _logger.debug({'msg': f"New {type_object}",
+                   'value': [(k, ['***'] if k.lower() == 'unicodepwd' else v) for k, v in list_object]},
+                  extra={'e_id': Event.DEBUG})
 
     if not dry_run:
         connect.add_s(dn, list_object)
     else:
-        _logger.warning("Enabled dry run")
+        _logger.warning({'msg': 'Enabled dry run'}, extra={'e_id': Event.DRY_RUN})

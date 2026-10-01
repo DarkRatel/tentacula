@@ -10,7 +10,7 @@ import ldap
 import ldap.sasl
 
 from .ds_dict import DSDict
-from .data import DataDSProperties, DS_TYPE_SCOPE, DS_TYPE_OBJECT, DS_GROUP_SCOPE, DS_GROUP_CATEGORY
+from .data import DataDSProperties, DS_TYPE_SCOPE, DS_TYPE_OBJECT, DS_GROUP_SCOPE, DS_GROUP_CATEGORY, Event
 from .func_ds_get import search_object, gen_filter_to_id
 from .ds_search_base import search_root_dse
 from .convertors_value import _UAC_FLAGS
@@ -24,6 +24,17 @@ _PREFIX_LDAP = {
     636: 'ldaps',
     389: 'ldap'
 }
+
+
+class MergingLoggerAdapter(logging.LoggerAdapter):
+    """Функция для объединения расширенных переменных из адаптера и строки события, для совместимости с Python ≤ 3.12"""
+
+    def process(self, msg, kwargs):
+        kwargs["extra"] = {
+            **self.extra,
+            **kwargs.get("extra", {}),
+        }
+        return msg, kwargs
 
 
 def kinit_keytab(login: str, keytab: str):
@@ -81,8 +92,7 @@ class DSHook:
             raise ValueError("Only 636 or 389 ports are allowed")
 
         # Создание уникального имени для логов
-        self._logger = logging.getLogger(self.__class__.__name__)
-
+        self._logger = MergingLoggerAdapter(logging.getLogger(self.__class__.__name__), extra={"u_id": self._login})
         self._logger.setLevel(log_level or logging.INFO)
 
     def __enter__(self):
@@ -105,8 +115,6 @@ class DSHook:
                 self._connect.set_option(ldap.OPT_DEBUG_LEVEL, 255)
                 self._connect.set_option(ldap.OPT_X_TLS_NEWCTX, 0)
 
-                self._logger.info(f"Run LDAP Connect: {connect_line}, login: {self._login}")
-
                 # Запрос выпуска билетов на основе Keytab, если ожидается использование keytab
                 if self._keytab:
                     kinit_keytab(login=self._login, keytab=self._keytab)
@@ -118,10 +126,23 @@ class DSHook:
 
                 break
             except ldap.SERVER_DOWN as e:
-                self._logger.warning(f"Host {connect_line}: {e}")
+                self._logger.warning(
+                    {'msg': 'Host unavailable', 'protocol': 'LDAP', 'host': connect_line, 'login': self._login,
+                     'error': str(e)},
+                    extra={'e_id': Event.AUTH_HOST_UNAVAILABLE}
+                )
 
         else:
-            raise TimeoutError(f"Can't contact LDAP servers")
+            self._logger.error(
+                {'msg': 'Auth failed', 'protocol': 'LDAP', 'host': connect_line, 'login': self._login},
+                extra={'e_id': Event.AUTH_ERROR}
+            )
+            raise TimeoutError(f"Auth failed")
+
+        self._logger.info(
+            {'msg': 'Auth success', 'protocol': 'LDAP', 'host': connect_line, 'login': self._login},
+            extra={'e_id': Event.AUTH_SUCCESS}
+        )
 
         # Если область каталога не определена, производится запрос для установки области работы
         self.base = self.base if self.base else search_root_dse(connect=self._connect, _logger=self._logger)
@@ -352,7 +373,8 @@ class DSHook:
         })
 
         ds_set(connect=self._connect, type_object="object", identity=identity, base=self.base, dry_run=self.dry_run,
-               remove=remove, add=add, replace=replace, clear=clear, special=special, _logger=self._logger)
+               remove=remove, add=add, replace=replace, clear=clear, special=special,
+               _logger=self._logger, event=Event.QUERY_SET_OBJECT)
 
     def set_user(self, identity: str | dict | DSDict,
                  remove: dict[str, list | bool | str] = None, add: dict[str, list | bool | str] = None,
@@ -407,7 +429,8 @@ class DSHook:
                 special['userAccountControl']['AccountNotDelegated'] = account_not_delegated
 
         ds_set(connect=self._connect, type_object="user", identity=identity, base=self.base, dry_run=self.dry_run,
-               remove=remove, add=add, replace=replace, clear=clear, special=special, _logger=self._logger)
+               remove=remove, add=add, replace=replace, clear=clear, special=special,
+               _logger=self._logger, event=Event.QUERY_SET_OBJECT)
 
     def set_group(self, identity: str | dict | DSDict,
                   remove: dict[str, list | bool | str] = None, add: dict[str, list | bool | str] = None,
@@ -443,7 +466,8 @@ class DSHook:
             if isinstance(group_category, bool): special['groupType']['GroupCategory'] = group_category
 
         ds_set(connect=self._connect, type_object="group", identity=identity, base=self.base, dry_run=self.dry_run,
-               remove=remove, add=add, replace=replace, clear=clear, special=special, _logger=self._logger)
+               remove=remove, add=add, replace=replace, clear=clear, special=special,
+               _logger=self._logger, event=Event.QUERY_SET_OBJECT)
 
     def set_computer(self, identity: str | dict | DSDict,
                      remove: dict[str, list | bool | str] = None, add: dict[str, list | bool | str] = None,
@@ -468,7 +492,8 @@ class DSHook:
         })
 
         ds_set(connect=self._connect, type_object="computer", identity=identity, base=self.base, dry_run=self.dry_run,
-               remove=remove, add=add, replace=replace, clear=clear, special=special, _logger=self._logger)
+               remove=remove, add=add, replace=replace, clear=clear, special=special,
+               _logger=self._logger, event=Event.QUERY_SET_OBJECT)
 
     def set_contact(self, identity: str | dict | DSDict,
                     remove: dict[str, list | bool | str] = None, add: dict[str, list | bool | str] = None,
@@ -493,7 +518,8 @@ class DSHook:
         })
 
         ds_set(connect=self._connect, dry_run=self.dry_run, type_object="contact", identity=identity, base=self.base,
-               remove=remove, add=add, replace=replace, clear=clear, special=special, _logger=self._logger)
+               remove=remove, add=add, replace=replace, clear=clear, special=special,
+               _logger=self._logger, event=Event.QUERY_SET_OBJECT)
 
     def set_account_password(self, identity: str | dict | DSDict, account_password: str) -> None:
         """
@@ -506,7 +532,8 @@ class DSHook:
 
         ds_set(connect=self._connect, type_object="user", identity=identity, base=self.base, dry_run=self.dry_run,
                replace={'unicodePwd': [account_password]},
-               special=DSDict({'userAccountControl': DSDict({'PasswordNotRequired': False})}), _logger=self._logger)
+               special=DSDict({'userAccountControl': DSDict({'PasswordNotRequired': False})}),
+               _logger=self._logger, event=Event.QUERY_SET_PASSWORD)
 
     def set_account_unlock(self, identity: str | dict | DSDict) -> None:
         """
@@ -517,7 +544,7 @@ class DSHook:
         """
 
         ds_set(connect=self._connect, type_object="user", identity=identity, base=self.base, dry_run=self.dry_run,
-               replace={'lockoutTime': ["0"]}, _logger=self._logger)
+               replace={'lockoutTime': ["0"]}, _logger=self._logger, event=Event.QUERY_SET_UNLOCK)
 
     def add_group_member(self, identity: str | dict | DSDict,
                          members: str | dict | DSDict | list[str] | tuple[str] | list[DSDict]) -> None:
@@ -562,14 +589,15 @@ class DSHook:
             only_one=True,
         )[0]
 
-        self._logger.info(f"Move object: DN: {result['distinguishedName']}, new path: {target_path}")
+        self._logger.info({'msg': 'Move object', 'dn': result['distinguishedName'], 'new_path': target_path},
+                          extra={'e_id': Event.QUERY_MOVE_OBJECT})
 
         if not self.dry_run:
             # Сохраняется оригинальный CN из строки distinguishedName
             self._connect.rename_s(result['distinguishedName'],
                                    ldap.dn.explode_dn(result['distinguishedName'])[0], target_path)
         else:
-            self._logger.warning("Enabled dry run")
+            self._logger.warning({'msg': 'Enabled dry run'}, extra={'e_id': Event.DRY_RUN})
 
     def rename_object(self, identity: str | dict | DSDict, new_name: str) -> None:
         """
@@ -589,13 +617,16 @@ class DSHook:
             only_one=True,
         )[0]
 
-        self._logger.info(f"Rename object: DN: {result['distinguishedName']}, new name: {new_name}, "
-                          f"old name: {result['name']}, old cn: {result['cn']}")
+        self._logger.info(
+            {'msg': 'Rename object', 'dn': result['distinguishedName'], 'new_name': new_name,
+             'old_name': result['name'], 'old_cn': result['cn']},
+            extra={'e_id': Event.QUERY_RENAME_OBJECT}
+        )
 
         if not self.dry_run:
             self._connect.rename_s(result['distinguishedName'], f"CN={new_name}")
         else:
-            self._logger.warning("Enabled dry run")
+            self._logger.warning({'msg': 'Enabled dry run'}, extra={'e_id': Event.DRY_RUN})
 
     def new_user(self, path: str, name: str, sam_account_name: str, account_password: str, display_name: str = None,
                  user_principal_name: str = None, enabled: bool = None, password_never_expires: bool = None,
@@ -702,12 +733,13 @@ class DSHook:
             only_one=True,
         )[0]
 
-        self._logger.info(f"Remove object: DN: {result['distinguishedName']}")
+        self._logger.info({'msg': 'Remove object', 'dn': result['distinguishedName']},
+                          extra={'e_id': Event.QUERY_REMOVE_OBJECT})
 
         if not self.dry_run:
             self._connect.delete_s(result['distinguishedName'])
         else:
-            self._logger.warning("Enabled dry run")
+            self._logger.warning({'msg': 'Enabled dry run'}, extra={'e_id': Event.DRY_RUN})
 
     def remove_user(self, identity: str | dict | DSDict) -> None:
         """

@@ -1,6 +1,7 @@
 """
 Функции чтения данных из СК
 """
+import logging
 import struct
 import uuid
 import re
@@ -10,7 +11,7 @@ import ldap
 import ldap.filter
 from ldap.controls.libldap import SimplePagedResultsControl
 
-from .data import DataDSLDAP, DS_TYPE_SCOPE, DS_TYPE_OBJECT_SYSTEM
+from .data import DataDSLDAP, DS_TYPE_SCOPE, DS_TYPE_OBJECT_SYSTEM, Event
 from .ds_dict import DSDict
 from .attributes_type import ATTR_TYPES
 from .convertors_value import convert_grouptype, convert_object_class, uac_to_flags, _UAC_FLAGS
@@ -69,7 +70,7 @@ ATTR_EXTEND = {
 }
 
 
-def object_processing(connect, _logger, data, properties, properties_shadow, range_on) -> DSDict:
+def object_processing(connect, _logger: logging.LoggerAdapter, data, properties, properties_shadow, range_on) -> DSDict:
     """Основная функция конвертации данных полученных объекта полученных из СК"""
     result = DSDict()
     # Перебор полученных атрибутов и значений
@@ -214,8 +215,9 @@ def isolation_filter(ldap_filter: str) -> str:
     return skeleton
 
 
-def search_object(connect, _logger, ldap_filter, search_base, properties, type_object: DS_TYPE_OBJECT_SYSTEM = 'object',
-                  search_scope: DS_TYPE_SCOPE = "subtree", only_one: bool = False,
+def search_object(connect, _logger: logging.LoggerAdapter, ldap_filter, search_base, properties,
+                  type_object: DS_TYPE_OBJECT_SYSTEM = 'object', search_scope: DS_TYPE_SCOPE = "subtree",
+                  only_one: bool = False,
                   result_set_size: int | None = None, range_on: bool = True) -> list[DSDict]:
     """
     Функция поиска объектов в СК
@@ -232,7 +234,7 @@ def search_object(connect, _logger, ldap_filter, search_base, properties, type_o
         result_set_size: Ограничение на число объектов, которые должно быть возвращено
         range_on: Параметр включающий запрос всех значений из атрибутов с большим количеством значений
     """
-    _logger.debug(f"SOURCE ldap_filter: {ldap_filter}")
+    _logger.debug({'msg': "SOURCE", 'ldap_filter': ldap_filter}, extra={'e_id': Event.DEBUG})
 
     # Конвертация LDAP-фильтра в вариант пригодный для LDAP
     ldap_filter = isolation_filter(ldap_filter)
@@ -282,8 +284,9 @@ def search_object(connect, _logger, ldap_filter, search_base, properties, type_o
     else:
         raise RuntimeError(f"Неизвестный тип области поиска: {search_scope}")
 
-    _logger.info(f"Get {type_object}: search_base: {search_base}, search_scope: {search_scope}, "
-                 f"ldap_filter: {ldap_filter}, properties: {properties}")
+    _logger.info({'msg': f"Get {type_object}", 'search_base': search_base, 'search_scope': search_scope,
+                  'ldap_filter': ldap_filter, 'properties': properties},
+                 extra={'e_id': Event.QUERY_GET_OBJECT})
 
     # Размер очереди по умолчанию
     req_ctrl = SimplePagedResultsControl(criticality=False, size=DEFAULT_SIZE_LDAP_PAGE, cookie='')
@@ -344,7 +347,7 @@ def search_object(connect, _logger, ldap_filter, search_base, properties, type_o
     return total_results
 
 
-def search_attribute_range(connect, _logger, dn: str, attribute: str) -> list:
+def search_attribute_range(connect, _logger: logging.LoggerAdapter, dn: str, attribute: str) -> list:
     """
     Функция получения всех оставшихся значений из переменной состоящей из страниц
 
@@ -367,8 +370,9 @@ def search_attribute_range(connect, _logger, dn: str, attribute: str) -> list:
     while True:
         attribute = f"{attr_name};range={start}-{end}"
 
-        _logger.debug(f"Get range: search_base: {search_base}, search_scope: {dn}, "
-                      f"ldap_filter: {ldap_filter}, properties: {[attribute]}")
+        _logger.debug({'msg': "Get range", 'search_base': search_base, 'search_scope': dn,
+                       'ldap_filter': ldap_filter, 'properties': [attribute]},
+                      extra={'e_id': Event.QUERY_GET_RANGE})
 
         res = connect.search_s(dn, search_base, ldap_filter, [attribute])[0][1]
 

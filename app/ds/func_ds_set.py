@@ -4,10 +4,11 @@
 Есть существенное отличие обработки специальных параметров (их обработка происходит в не функции)
 Поскольку при изменении не требуется сперва получать исходный объект, поэтому есть отличия от создания объектов
 """
+import logging
 import ldap
 from datetime import datetime
 
-from .data import DS_TYPE_OBJECT_SYSTEM
+from .data import DS_TYPE_OBJECT_SYSTEM, Event
 from .ds_dict import DSDict
 from .func_ds_get import search_object, gen_filter_to_id
 from .func_ds_gen import gen_uac, gen_gt, gen_change_pwd_at_logon, gen_account_exp_date
@@ -57,7 +58,7 @@ ATTR_PROCESSING = DSDict({
 })
 
 
-def ds_set(connect, _logger, type_object: DS_TYPE_OBJECT_SYSTEM, dry_run: bool,
+def ds_set(connect, _logger: logging.LoggerAdapter, event: str, type_object: DS_TYPE_OBJECT_SYSTEM, dry_run: bool,
            identity: str | DSDict | dict, base: str, remove: dict[str, list | str | bool] | None = None,
            add: dict[str, list | str | bool] | None = None, replace: dict[str, list | str | bool] | None = None,
            clear: list | tuple | None = None, special: dict | None = None) -> None:
@@ -67,11 +68,12 @@ def ds_set(connect, _logger, type_object: DS_TYPE_OBJECT_SYSTEM, dry_run: bool,
     Args:
         connect: Переменная с открытой сессией к СК
         _logger: Переменная с логированием
+        event: Код события для логирования
         type_object: Тип объекта
         dry_run: Запуск без внесения изменений в СК
         identity: Уникальный идентификатор редактируемого объекта
         base: Область поиска редактируемого объекта в СК
-        remove: Словарь атрибутов из которых будут удаляться переданные значения
+        remove: Словарь атрибутов, из которых будут удаляться переданные значения
         add: Словарь атрибутов, в которые будут добавляться переданные атрибуты;
         replace: Словарь атрибутов, в которых значения будут заменены на переданные
         clear: Список атрибутов, которые будут отчищены
@@ -141,9 +143,9 @@ def ds_set(connect, _logger, type_object: DS_TYPE_OBJECT_SYSTEM, dry_run: bool,
     if not list_object:
         raise ValueError("Нет данных для изменения")
 
-    _logger.info(f"Set {type_object}: DN: {result['distinguishedName']}, "
-                 f"new value: {[(a, k, ['***'] if k.lower() == 'unicodepwd' else v) for a, k, v in list_object]}, "
-                 f"old value: {result}")
+    _logger.info({'msg': f"Set {type_object}", 'dn': result['distinguishedName'],
+                  'new_value': [(a, k, ['***'] if k.lower() == 'unicodepwd' else v) for a, k, v in list_object],
+                  'old_value': result}, extra={'e_id': event})
 
     # Проверка значений и конвертация значений в UTF
     for index, (action, key, values) in enumerate(list_object):
@@ -158,11 +160,11 @@ def ds_set(connect, _logger, type_object: DS_TYPE_OBJECT_SYSTEM, dry_run: bool,
         else:
             list_object[index] = (action, key, [v if isinstance(v, bytes) else v.encode("utf-8") for v in values])
 
-    _logger.debug(f"Set {type_object}: DN: {result['distinguishedName']}, "
-                  f"new value: {[(a, k, ['***'] if k.lower() == 'unicodepwd' else v) for a, k, v in list_object]}, "
-                  f"old value: {result}")
+    _logger.debug({'msg': f"Set {type_object}", 'dn': result['distinguishedName'],
+                   'new_value': [(a, k, ['***'] if k.lower() == 'unicodepwd' else v) for a, k, v in list_object],
+                   'old_value': result}, extra={'e_id': Event.DEBUG})
 
     if not dry_run:
         connect.modify_s(result['distinguishedName'], list_object)
     else:
-        _logger.warning("Enabled dry run")
+        _logger.warning({'msg': 'Enabled dry run'}, extra={'e_id': Event.DRY_RUN})
