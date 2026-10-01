@@ -99,3 +99,9 @@ class Event:
     UNWILLING_TO_PERFORM = 'ds.unwilling_to_perform'
     DEBUG = 'ds.debug'
     DRY_RUN = 'ds.dry_run'
+
+    TENT_QUERY_ID = 'ds.tent.scheduler.query_id'
+    TENT_QUERY_ENDPOINT = 'ds.tent.endpoint.query'
+    TENT_ENDPOINT_ERROR = 'ds.tent.endpoint.error'
+    TENT_ENDPOINT_ERROR_ANSWER = 'ds.tent.endpoint.error_answer'
+    TENT_QUERY_PARAM = 'ds.tent.param'
