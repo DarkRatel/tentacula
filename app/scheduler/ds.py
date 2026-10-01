@@ -141,7 +141,7 @@ async def task_processing(source_uuid: str, task_id: int):
             await db.commit()
         except Exception as e:
             e = str(e)
-            logging.info({'msg': f"Error : {e}"}, extra=Event.SHED_FORMATION_TASK)
+            logging.warning({'msg': f"Error : {e}"}, extra={'e_id': Event.SHED_FORMATION_TASK})
 
             async with AsyncSessionLocal() as db:
                 task = (
