@@ -1,6 +1,7 @@
 """
 Функция создания эндпоинтов в виде готовых Присосок, с учётом всей специфики работы Тентакли
 """
+import logging
 import json
 from typing import Callable, Union, Type
 
@@ -10,8 +11,8 @@ from fastapi import APIRouter, status, Depends, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from app.moduls.auth import get_current_user
-from app.systems.logging import logger
 from app.moduls.json_convert import json_encoder, json_decoder
+from app.systems.logging import user_id_ctx_var, event_id_ctx_var
 
 STEP = 1500  # Общая переменная шага для списков, которые будут возвращены
 BEFORE_ANSWERING = 150  # Количество токенов, которое должно быть отсчитано, прежде чем сервер пошлёт сообщение
@@ -47,6 +48,8 @@ def create_post(router: APIRouter,
 
     route_name = router.prefix.replace('/', '')
 
+    logger = logging.getLogger(__name__)
+
     def create_handler():
         """Функция создания функции для эндпоинта"""
 
@@ -54,12 +57,20 @@ def create_post(router: APIRouter,
                                         user=Depends(get_current_user(access))):
             """Функция исполняющаяся внутри эндпоинта"""
 
+            event_id_ctx_var.set('endpoint.run')
+
+            logger.info({'msg': 'Session endpoint',
+                         'protocol': request.headers['x-forwarded-proto'].upper(),
+                         'host_name': request.headers['host'],
+                         'host_ip': request.headers['x-server-ip'],
+                         'url': str(request.url),
+                         'client_ip': request.headers.get('x-forwarded-for')})
+
             async def stream_result(s_func, s_param):
                 """
                 Функция стриминга ответа клиенту.
                 Стримится один большой JSON, в рамках которого и получен ли успешный ответ в рамках запроса
                 """
-                logger.info("======Function======")
                 # Отправляется объявление словаря и ключа для отправки точки, пока на эндпоинте идёт обработка
                 yield '{"waiting": "'
 
@@ -117,7 +128,7 @@ def create_post(router: APIRouter,
                     yield str(json.dumps(str(s_result), ensure_ascii=False))
 
                 yield "}"
-                logger.info("======End======")
+                logger.debug("End endpoint")
 
             # Основная функция исполнения эндпоинта
             try:
@@ -125,7 +136,7 @@ def create_post(router: APIRouter,
                 if data:
                     data = json_decoder(data.model_dump())
                     # Вывод входных данных в логи
-                    logger.info("Input data: %s", input_dada)
+                    logger.info({**{'msg':'input data'}, **data})
                 else:
                     data = None
 
