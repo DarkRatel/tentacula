@@ -1,12 +1,14 @@
 import uuid
-from app.systems.logging import logger, s_id_ctx_var  # Функции для логирования
+from app.systems.logging import session_id_ctx_var
+import logging
 
+logger = logging.getLogger(__name__)
 
 # Пример функции
 def example():
     """Пример функции"""
     # Создание id-запуска
-    s_id_ctx_var.set(str(uuid.uuid4()))
+    session_id_ctx_var.set(str(uuid.uuid4()))
 
     logger.info('Hellow World!')
 
