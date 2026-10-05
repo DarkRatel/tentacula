@@ -105,3 +105,7 @@ class Event:
     TENT_ENDPOINT_ERROR = 'ds.tent.endpoint.error'
     TENT_ENDPOINT_ERROR_ANSWER = 'ds.tent.endpoint.error_answer'
     TENT_QUERY_PARAM = 'ds.tent.param'
+    TENT_SYSTEM_ERROR = 'ds.tent.system_error'
+    TENT_TIMEOUT = 'ds.tent.timeout'
+    TENT_NOT_FIND_TASK = 'ds.tent.not_found_task'
+    TENT_SCHEDULER_ERROR = 'ds.tent.scheduler.error'

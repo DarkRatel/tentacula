@@ -172,6 +172,7 @@ def request_db(_connect, _logger: logging.LoggerAdapter, db_table: str, timeout:
                         cur.execute(f"DELETE FROM {db_table} WHERE id = {query_id}")
                         cur.connection.commit()
 
+                        _logger.error(result[1], extra={'e_id': Event.TENT_SCHEDULER_ERROR})
                         raise RuntimeError(result[1])
 
                     if result[0] == 'complete':
@@ -182,10 +183,12 @@ def request_db(_connect, _logger: logging.LoggerAdapter, db_table: str, timeout:
                             return [DSDict(i) for i in result[1]]
                         return result[1]
                 else:
+                    _logger.error('Not find task in table', extra={'e_id': Event.TENT_NOT_FIND_TASK})
                     raise RuntimeError("В таблице не найдено задание")
 
                 # Если время вышло, процесс ожидания прерывается
                 if datetime.now() > dt_timeout:
+                    _logger.error('Response timeout', extra={'e_id': Event.TENT_TIMEOUT})
                     raise TimeoutError("Время ожидания выполнения запроса истекло")
 
 
@@ -201,7 +204,7 @@ class SDSHook:
     CONN_DB = 3
 
     def __init__(self, login: str = None, password: str = None, host: str | list[str] = None, port: int = 636,
-                 base: str = None, dry_run: bool = False, log_level: int = None, public_key: str = None,
+                 base: str = None, dry_run: bool = None, log_level: int = None, public_key: str = None,
                  timeout: int = 180, db_login: str = None, db_password: str = None, db_host: str = None,
                  db_port: int = 5432, database: str = None, db_pre_execution_delay: float = 0.1,
                  db_execution_delay: float = 0.1, url: str | list = None, cert_root: str = None, cert_file: str = None,
@@ -318,7 +321,7 @@ class SDSHook:
         self._tent_pass = tent_pass
 
         # Создание уникального имени для логов
-        self._logger = MergingLoggerAdapter(logging.getLogger(self.__class__.__name__), extra={"u_id": self._login})
+        self._logger = MergingLoggerAdapter(logging.getLogger('DSHook'), extra={"u_id": self._login})
         self._logger.setLevel(log_level or logging.INFO)
 
         self._param_conn = {k: v for k, v in
@@ -445,16 +448,18 @@ class SDSHook:
                     self._logger.warning(f"Host {url}: {e}", extra={'e_id': Event.TENT_ENDPOINT_ERROR})
 
             else:
-                raise TimeoutError(f"Can't contact HTTP servers")
+                self._logger.error("Can't contact HTTP servers", extra={'e_id': Event.TENT_SYSTEM_ERROR})
+                raise TimeoutError("Can't contact HTTP servers")
 
             # Проверка полученных результатов
             try:
                 response.raise_for_status()
                 result = response.json()
                 if result['error']:
+                    self._logger.error(result['details'], extra={'e_id': Event.TENT_ENDPOINT_ERROR_ANSWER})
                     raise RuntimeError(result['details'])
             except Exception as e:
-                self._logger.warning(response.text, extra={'e_id': Event.TENT_ENDPOINT_ERROR_ANSWER})
+                self._logger.error(response.text, extra={'e_id': Event.TENT_ENDPOINT_ERROR_ANSWER})
                 raise e
 
             if isinstance(result['details'], list):
@@ -471,8 +476,12 @@ class SDSHook:
                 param_query=encode_param(self._public_key, mask_protect_data(param_query, hide_pass=False)),
                 pre_execution_delay=self._db_pre_execution_delay, execution_delay=self._db_execution_delay
             ))
-        else:
-            raise ValueError("Не удалось определить тип подключения")
+
+        self._logger.error(
+            {'msg': 'Not correct type connection', 'type': self._type_conn},
+            extra={'e_id': Event.TENT_SYSTEM_ERROR}
+        )
+        raise ValueError("Не удалось определить тип подключения")
 
     def get_root_dse(self, ldap_filter: str = '(objectClass=*)', properties: str | list | tuple = '*') -> list:
         """
