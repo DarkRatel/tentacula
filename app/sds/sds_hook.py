@@ -474,6 +474,16 @@ class SDSHook:
         else:
             raise ValueError("Не удалось определить тип подключения")
 
+    def get_root_dse(self, ldap_filter: str = '(objectClass=*)', properties: str | list | tuple = '*') -> list:
+        """
+        Функция запроса данных корня домена
+
+        Args:
+            ldap_filter: Аргумент для поиска по LDAP-фильтру
+            properties: properties: Запрос дополнительных атрибутов. '*' возвращает все заполненные атрибуты
+        """
+        return self._query('get_root_dse', locals_value(locals()))
+
     def get_object(
             self, identity: str | dict | DSDict = None, ldap_filter: str = None,
             properties: str | list | tuple = None, search_scope: DS_TYPE_SCOPE = None,

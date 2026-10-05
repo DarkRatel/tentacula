@@ -12,7 +12,7 @@ import ldap.sasl
 from .ds_dict import DSDict
 from .data import DataDSProperties, DS_TYPE_SCOPE, DS_TYPE_OBJECT, DS_GROUP_SCOPE, DS_GROUP_CATEGORY, Event
 from .func_ds_get import search_object, gen_filter_to_id
-from .ds_search_base import search_root_dse
+from .func_ds_get_root import search_root_dse, get_root_dse
 from .convertors_value import _UAC_FLAGS
 from .func_ds_gen import gen_uac, gen_gt, gen_change_pwd_at_logon, gen_account_exp_date
 from .func_ds_new import ds_new
@@ -152,6 +152,16 @@ class DSHook:
         """Автоматическое закрытие сессии"""
         self._connect.unbind_s()
         return False
+
+    def get_root_dse(self, ldap_filter: str = '(objectClass=*)', properties: str | list | tuple = '*') -> list:
+        """
+        Функция запроса данных корня домена
+
+        Args:
+            ldap_filter: Аргумент для поиска по LDAP-фильтру
+            properties: properties: Запрос дополнительных атрибутов. '*' возвращает все заполненные атрибуты
+        """
+        return get_root_dse(self._connect, self._logger, ldap_filter, properties)
 
     def get_object(
             self, identity: str | dict | DSDict = None, ldap_filter: str = None,
