@@ -141,7 +141,7 @@ def request_db(_connect, _logger: logging.LoggerAdapter, db_table: str, timeout:
                 f" VALUES ('waiting', '{type_query}', '{param_conn}', '{param_query}') RETURNING id"
             )
             query_id = cur.fetchone()[0]
-            _logger.info({'msg': 'Task in DS', 'id': query_id}, extra={'e_id': Event.TENT_QUERY_ID})
+            _logger.info({'msg': 'DS Task', 'id': query_id}, extra={'e_id': Event.TENT_QUERY_ID})
 
     dt_start = datetime.now()
     dt_timeout = dt_start + timedelta(seconds=timeout)
