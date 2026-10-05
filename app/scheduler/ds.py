@@ -169,6 +169,9 @@ async def scheduler_ds_tasker():
     if background_tasks:
         logging.info("Active background tasks: %s", len(background_tasks))
 
+    # Счётчик каунтов, для пропуска пауз, между опросами БД
+    count_skip = 0
+
     for _ in range(AppConfig.SCHEDULERS_DS__POLLING_ATTEMPTS):
         task_ids = None
 
@@ -194,15 +197,23 @@ async def scheduler_ds_tasker():
         if task_ids:
             # Для всех найденных заданий формирование задания для исполнения на заднем фоне
             for task_id in task_ids:
+                # Каждое задание добавляет токен пропусков
+                count_skip += 1
+
                 bg_task = asyncio.create_task(task_processing(source_uuid, task_id))
                 track_background_task(bg_task)
+
+        # Если токен есть, то он уменьшается и пропускается пауза между опросами БД
+        if count_skip:
+            count_skip -= 1
+            continue
 
         await asyncio.sleep(AppConfig.SCHEDULERS_DS__PAUSE_BETWEEN_ATTEMPTS)
 
 
-# Формирование частоты запуска шедуллера
-seconds = ((AppConfig.SCHEDULERS_DS__POLLING_ATTEMPTS * AppConfig.SCHEDULERS_DS__PAUSE_BETWEEN_ATTEMPTS)
-           + AppConfig.SCHEDULERS_DS__PAUSE_BETWEEN_ATTEMPTS)
+# Формирование частоты запуска шедуллера.
+# Чтобы запуск шедуллера не накладывался друг на друга, добавляется секунда
+seconds = ((AppConfig.SCHEDULERS_DS__POLLING_ATTEMPTS * AppConfig.SCHEDULERS_DS__PAUSE_BETWEEN_ATTEMPTS) + 1)
 
 # Запуск заданий для обращения к СК
 scheduler.add_job(scheduler_ds_tasker, "interval", seconds=seconds,
