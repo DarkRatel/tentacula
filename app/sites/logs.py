@@ -2,7 +2,9 @@ import re
 import os
 import json
 import logging
+import typing
 from pathlib import Path
+from datetime import datetime, timezone, timedelta
 
 from fastapi import APIRouter
 from pydantic import BaseModel
@@ -14,25 +16,70 @@ logger = logging.getLogger("logs")
 
 router_logs = APIRouter()
 
+# Допустимые типы запросов логов
+TYPE_ACCESS = typing.Literal['web_access', 'web_error', 'api']
+
+PARS_WEB_LOG_ERROR_STR = re.compile(
+    r'^(?P<time>\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2}) '
+    r'\[(?P<level>\w+)] '
+    r'(?P<pid>\d+)#(?P<tid>\d+): '
+    r'(?:\*(?P<connection>\d+) )?'
+    r'(?P<message>[^,]+)'
+    r'(?P<dict>.*)'
+)
+
+PARS_WEB_LOG_ERROR_DICT = re.compile(r'([a-zA-Z0-9_-]+): (?:"([^"]*)"|([^,]*))')
+
+
+def pars_web_error(string: str):
+    """Парсин строки веб-сервера NGINX из блока error_log"""
+    temp = PARS_WEB_LOG_ERROR_STR.match(string).groupdict()
+    temp['time'] = datetime.strptime(temp['time'], '%Y/%m/%d %H:%M:%S').replace(tzinfo=timezone.utc).isoformat()
+    temp.update({'raw': string})
+    temp.update(
+        {key: quoted if quoted != "" else unquoted
+         for key, quoted, unquoted in PARS_WEB_LOG_ERROR_DICT.findall(temp.pop('dict'))}
+    )
+    return temp
+
+
+def json_pars(item: str):
+    """Парсинг строки логов, которая изначально сохранена в формате JSON"""
+    return json.loads(item)
+
+
 # Формирование списка источников логов и их привязка к ID
 ID_FOLDER = {
-    'web': AppConfig.WEB__LOGS_FOLDER,
-    'api': AppConfig.APP__LOGS_FOLDER
+    'web_access': (
+        AppConfig.WEB__LOGS_FOLDER,
+        "access*.log",
+        json_pars
+    ),
+    'web_error': (
+        AppConfig.WEB__LOGS_FOLDER,
+        "error*.log",
+        json_pars if AppConfig.WEB__ERROR_SUPPORT_JSON else pars_web_error
+    ),
+    'api': (
+        AppConfig.APP__LOGS_FOLDER,
+        "api*.log",
+        json_pars
+    )
 }
 
 
 class SpecData(BaseModel):
-    source: str = 'web,api'
+    source: TYPE_ACCESS | list[TYPE_ACCESS]
     time_start: str = None
     time_end: str = None
     s_id: str = None
 
 
 def search_logs(source: str, time_start: str = None, time_end: str = None, s_id: str = None):
-    directory = Path(ID_FOLDER[source])
+    directory = Path(ID_FOLDER[source][0])
 
     data = []
-    for file_path in directory.rglob("*.log"):
+    for file_path in directory.rglob(ID_FOLDER[source][1]):
         if not file_path.is_file():
             logger.info(f"Skipping {file_path} - not a files")
 
@@ -48,9 +95,9 @@ def search_logs(source: str, time_start: str = None, time_end: str = None, s_id:
                     continue
 
                 try:
-                    line = convert_dict(json.loads(line), source=source, filename=base_name)
+                    line = convert_dict(ID_FOLDER[source][2](line), source=source, filename=base_name)
                 except json.JSONDecodeError:
-                    logger.warning({'msg': 'Error read', 'data': data})
+                    logger.warning({'msg': 'Error read', 'data': line})
 
                 if time_start and not (line["time"] >= time_start):
                     continue
@@ -89,10 +136,10 @@ def convert_dict(dict_line: dict, source: str, filename: str):
     }
 
 
-def logs(source: str = 'web,api', time_start: str = None, time_end: str = None, s_id: str = None):
+def logs(source: TYPE_ACCESS | list[TYPE_ACCESS], time_start: str = None, time_end: str = None, s_id: str = None):
     for_return = []
 
-    for source in source.split(','):
+    for source in [source] if isinstance(source, str) else source:
         for_return += search_logs(source, time_start=time_start, time_end=time_end, s_id=s_id)
 
     return for_return

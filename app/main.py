@@ -54,6 +54,7 @@ async def lifespan(app: FastAPI):
                 ssl_certfile=AppConfig.WEB__SSL_CERTFILE,
                 ssl_keyfile=AppConfig.WEB__SSL_KEYFILE,
                 ssl_ca_certs=AppConfig.WEB__SSL_CA_CERTS,
+                error_support_json=AppConfig.WEB__ERROR_SUPPORT_JSON,
             )
 
         with open(AppConfig.WEB__NGINX_FILE, "w") as f:

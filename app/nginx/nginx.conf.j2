@@ -29,11 +29,10 @@ http {
     # $host - Имя хоста (сервера)
 
     {% if json_log %}
-    time_format $time_utc "%Y-%m-%dT%H:%M:%S.%LZ";
-
+    # Логи HTTP-запросов в формате JSON
     log_format tentacula escape=json
     '{'
-    '"time":"$time_utc"'
+    '"time":"$time_iso8601"'
     ',"level":"info"'
     ',"pid":$pid'
     ',"tid":null'
@@ -59,17 +58,19 @@ http {
     '}'
     ',"tags":["http","query"]'
     '}';
-
-    # Логи HTTP-запросов в формате JSON
+    {% else %}
+    # Логи HTTP-запросов в обычном формате
+    log_format tentacula '[$time_iso8601] [$request_id] "$remote_addr" "$request" "$status" "$body_bytes_sent"'
+                     ' "$http_referer" "$http_user_agent"'
+                     ' Cert serial: "$ssl_client_serial" Cert subject: "$ssl_client_s_dn"';
+    {% endif %}
     access_log {{ logs_folder }}/access.log tentacula;
+
+    {% if json_log and error_support_json %}
+    # Логи HTTP-запросов в формате JSON
     error_log  {{ logs_folder }}/error.log info format=json;
     {% else %}
-    log_format tentacula '[$time_iso8601] [$request_id] "$remote_addr" "$request" "$status" "$body_bytes_sent"'
-                         ' "$http_referer" "$http_user_agent"'
-                         ' Cert serial: "$ssl_client_serial" Cert subject: "$ssl_client_s_dn"';
-
-     # Логи HTTP-запросов в обычном формате
-    access_log {{ logs_folder }}/access.log tentacula;
+    # Логи HTTP-запросов в обычном формате
     error_log  {{ logs_folder }}/error.log info;
     {% endif %}
 

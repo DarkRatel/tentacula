@@ -168,6 +168,9 @@ class _AppConfig:
             self.WEB__SSL_KEYFILE = _read_any(config=_config, chapter='web', name='SSL_KEYFILE', default=False)
             self.WEB__SSL_CA_CERTS = _read_any(config=_config, chapter='web', name='SSL_CA_CERTS', default=False)
 
+            self.WEB__ERROR_SUPPORT_JSON = _read_bool(config=_config, chapter='web',
+                                                      name='ERROR_SUPPORT_JSON', default=False)
+
         # [composition]
         self.COMPOSITION__ENABLED = _read_bool(config=_config, chapter='composition', name='ENABLED', default=False)
         if self.COMPOSITION__ENABLED:
