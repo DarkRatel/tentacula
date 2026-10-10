@@ -137,6 +137,7 @@ class _AppConfig:
         self.APP__SECRET_KEY = _read_any(config=_config, chapter='app', name='SECRET_KEY', default=False)
         if self.APP__SECRET_KEY:
             self.APP__SECRET_KEY = _read_file(self.APP__SECRET_KEY)
+            # Конвертация полученного значения для работы с готовым секретным ключом
             self.APP__SECRET_KEY = base64.b64decode(self.APP__SECRET_KEY.encode('utf-8'))
             self.APP__SECRET_KEY = serialization.load_pem_private_key(self.APP__SECRET_KEY, password=None)
 
