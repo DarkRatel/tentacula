@@ -44,7 +44,9 @@ def composition(url_: str, path_: str, json_: dict):
 
         if 'json_' in transit:
             for k, v in transit['json_'].items():
-                json_[k] = v
+                # Если в исходном JSON нет поля, оно добавляется
+                if k not in json_:
+                    json_[k] = v
             logging.info({'msg': 'Transit Data', 'data': json_})
 
     url_ = [url_] if isinstance(url_, str) else url_
