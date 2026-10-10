@@ -31,4 +31,4 @@ def example(terms_1: int, terms_2: int):
 # Функция создающая эндпоинт на основе имени эндпоинта, функции и ожидаемых значений.
 # Если включен держим работы проверки клиента, требуется указать в ключе access соответствующий идентификатор клиента
 # Если входные данные не требуется, base_model должен быть равен None
-create_post(endpoint="example", base_model=SpecData, func=example, router=router_sucker, access=["CN=myclient"])
+create_post(endpoint="example", base_model=SpecData, func=example, router=router_sucker, access=[])

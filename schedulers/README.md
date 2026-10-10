@@ -16,14 +16,16 @@
 
 ```
 import uuid
-from app.systems.logging import logger, s_id_ctx_var  # Функции для логирования
+from app.systems.logging import session_id_ctx_var
+import logging
 
+logger = logging.getLogger(__name__)
 
 # Пример функции
 def example():
     """Пример функции"""
     # Создание id-запуска
-    s_id_ctx_var.set(str(uuid.uuid4()))
+    session_id_ctx_var.set(str(uuid.uuid4()))
 
     logger.info('Hellow World!')
 
@@ -33,13 +35,12 @@ def register_jobs(scheduler):
     # Добавление задачи в шедуллер
     scheduler.add_job(example, "interval", minutes=1, id="example", replace_existing=True,
                       max_instances=1, coalesce=True)
-
 ```
 
 ## Логирование
 
 В начале пользовательской функции необходимо исполнить создание уникального ID запуска:
-`s_id_ctx_var.set(str(uuid.uuid4()))`.
+`session_id_ctx_var.set(str(uuid.uuid4()))`.
 Для корректного логирования используется встроенный класс `from app.systems.logging import logger`.
 Он сохраняет логи в локальную папку и маскирует чувствительную информацию,
 ключ попадает под значения из `LOGS_MASK_KEYS`.
