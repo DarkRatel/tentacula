@@ -68,18 +68,12 @@ ID_FOLDER = {
 }
 
 
-class SpecData(BaseModel):
-    source: TYPE_ACCESS | list[TYPE_ACCESS]
-    time_start: str = None
-    time_end: str = None
-    s_id: str = None
-
-
-def search_logs(source: str, time_start: str = None, time_end: str = None, s_id: str = None):
+def search_logs(source: str, search_depth: bool, time_start: str = None, time_end: str = None, s_id: str = None):
+    """Функция опроса папки"""
     directory = Path(ID_FOLDER[source][0])
 
     data = []
-    for file_path in directory.rglob(ID_FOLDER[source][1]):
+    for file_path in directory.rglob(ID_FOLDER[source][1]) if search_depth else directory.glob(ID_FOLDER[source][1]):
         if not file_path.is_file():
             logger.info(f"Skipping {file_path} - not a files")
 
@@ -136,13 +130,29 @@ def convert_dict(dict_line: dict, source: str, filename: str):
     }
 
 
-def logs(source: TYPE_ACCESS | list[TYPE_ACCESS], time_start: str = None, time_end: str = None, s_id: str = None):
+def logs(source: TYPE_ACCESS | list[TYPE_ACCESS], search_depth: bool = False, s_id: str = None,
+         time_start: str = None, time_end: str = None):
+    """Основная функция API получения логов"""
     for_return = []
 
     for source in [source] if isinstance(source, str) else source:
-        for_return += search_logs(source, time_start=time_start, time_end=time_end, s_id=s_id)
+        for_return += search_logs(
+            source,
+            search_depth=search_depth,
+            time_start=time_start,
+            time_end=time_end,
+            s_id=s_id
+        )
 
     return for_return
+
+
+class SpecData(BaseModel):
+    search_depth: bool = False # Включение поиска во вложенных папках
+    source: TYPE_ACCESS | list[TYPE_ACCESS] # Источник логов
+    time_start: str = None # Фильтр по начальной дате поиска (больше или равно)
+    time_end: str = None # Фильтр по конечной дате поиска (меньше)
+    s_id: str = None # Фильтр по ID-сессии
 
 
 create_post(endpoint="logs", func=logs, access=AppConfig.SECURITY__LIST_OF_PERMITTED,
