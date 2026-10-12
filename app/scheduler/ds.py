@@ -213,7 +213,10 @@ async def scheduler_ds_tasker():
 
 # Формирование частоты запуска шедуллера.
 # Чтобы запуск шедуллера не накладывался друг на друга, добавляется секунда
-seconds = ((AppConfig.SCHEDULERS_DS__POLLING_ATTEMPTS * AppConfig.SCHEDULERS_DS__PAUSE_BETWEEN_ATTEMPTS) + 1)
+seconds = (
+        (AppConfig.SCHEDULERS_DS__POLLING_ATTEMPTS * AppConfig.SCHEDULERS_DS__PAUSE_BETWEEN_ATTEMPTS)
+        + AppConfig.PAUSE_AFTER
+)
 
 # Запуск заданий для обращения к СК
 scheduler.add_job(scheduler_ds_tasker, "interval", seconds=seconds,

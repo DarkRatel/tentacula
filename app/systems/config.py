@@ -214,6 +214,8 @@ class _AppConfig:
             self.SCHEDULERS_DS__PAUSE_BETWEEN_ATTEMPTS = _read_any(config=_config, chapter='schedulers_ds',
                                                                    name='PAUSE_BETWEEN_ATTEMPTS', default=0.1,
                                                                    type_=float)
+            self.SCHEDULERS_DS__PAUSE_AFTER = _read_any(config=_config, chapter='schedulers_ds',
+                                                        name='PAUSE_AFTER', default=2, type_=float)
 
 
 # Инициализация конфигурации
