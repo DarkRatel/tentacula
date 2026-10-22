@@ -8,10 +8,10 @@ import logging
 import ldap
 from datetime import datetime
 
-from .data import DS_TYPE_OBJECT_SYSTEM, Event
+from .data import DS_TYPE_OBJECT_SYSTEM, Event, DS_ENCRYPT_TYPE
 from .ds_dict import DSDict
 from .func_ds_get import search_object, gen_filter_to_id
-from .func_ds_gen import gen_uac, gen_gt, gen_change_pwd_at_logon, gen_account_exp_date
+from .func_ds_gen import gen_uac, gen_gt, gen_change_pwd_at_logon, gen_account_exp_date, gen_ket
 from .convertors_value import convert_value
 
 
@@ -41,6 +41,10 @@ def handler_account_exp_date(_, value: bool | datetime | str):
     return gen_account_exp_date(value)
 
 
+def handler_kerberos_encryption(source: int, value: list[DS_ENCRYPT_TYPE]):
+    return str(gen_ket(ket=source, flags_=value))
+
+
 def handler_default(_, value):
     """Функция для всех атрибутов, под которые не были найдены подходящие обработки.
     Ключ <исходного значения> не учитывается"""
@@ -54,6 +58,7 @@ ATTR_PROCESSING = DSDict({
     'groupType': handler_gt,
     'pwdLastSet': handler_change_pwd_at_logon,
     'accountExpires': handler_account_exp_date,
+    'msDS-SupportedEncryptionTypes': handler_kerberos_encryption,
     '_default_': handler_default,
 })
 

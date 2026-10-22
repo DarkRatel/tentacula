@@ -176,3 +176,18 @@ def convert_value(key: str, value: str | bool) -> list[str]:
             raise ValueError(f"In '{key}' value '{v}' cannot be None")
 
     return value
+
+
+_TEK_FLAGS = {
+    None: 0x00,  # Нет указателей шифрования
+    'DES-CBC-CRC': 0x01,  # DES
+    'DES-CBC-MD5': 0x02,  # DES
+    'RC4-HMAC': 0x04,  # RC4
+    'AES128-CTS-HMAC-SHA1-96': 0x08,  # AES128
+    'AES256-CTS-HMAC-SHA1-96': 0x10,  # AES256
+}
+
+
+def convert_tek(data: int):
+    """Функция возвращает флаги userAccountControl на основе integer"""
+    return [name for name, bit in _TEK_FLAGS.items() if data & bit]

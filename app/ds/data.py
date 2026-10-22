@@ -11,6 +11,7 @@ DS_TYPE_OBJECT_SYSTEM = typing.Literal["object", "user", "group", "computer", "c
 DS_GROUP_SCOPE = typing.Literal["DomainLocal", "Global", "Universal"]
 DS_GROUP_CATEGORY = typing.Literal["Security", "Distribution"]
 DS_ACTION_MEMBER = typing.Literal["add", "remove"]
+DS_ENCRYPT_TYPE = typing.Literal[None, 'DES', 'RC4', 'AES128', 'AES256']
 
 
 class DataDSLDAP(Enum):
@@ -49,6 +50,7 @@ class DataDSProperties(Enum):
                 "objectSid", "UserPrincipalName", "userAccountControl"]
     CONTACT = ["distinguishedName", "Name", "ObjectClass", "ObjectGUID"]
     MEMBER = ["distinguishedName", "Name", "ObjectClass", "ObjectGUID", "sAMAccountName", "objectSid"]
+
 
 from dataclasses import dataclass
 
@@ -92,10 +94,10 @@ class Event:
     QUERY_NEW_CONTACT = 'ds.query.new.contact'  # new_contact
 
     QUERY_REMOVE_OBJECT = 'ds.query.remove.object'  # remove_object,
-    QUERY_REMOVE_USER = 'ds.query.remove.user' # remove_user
-    QUERY_REMOVE_GROUP = 'ds.query.remove.group' # remove_group
-    QUERY_REMOVE_COMPUTER = 'ds.query.remove.computer' # remove_computer
-    QUERY_REMOVE_CONTACT = 'ds.query.remove.contact' # remove_contact
+    QUERY_REMOVE_USER = 'ds.query.remove.user'  # remove_user
+    QUERY_REMOVE_GROUP = 'ds.query.remove.group'  # remove_group
+    QUERY_REMOVE_COMPUTER = 'ds.query.remove.computer'  # remove_computer
+    QUERY_REMOVE_CONTACT = 'ds.query.remove.contact'  # remove_contact
     UNWILLING_TO_PERFORM = 'ds.unwilling_to_perform'
     DEBUG = 'ds.debug'
     DRY_RUN = 'ds.dry_run'

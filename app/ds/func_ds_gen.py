@@ -2,9 +2,11 @@
 Функции генерации атрибутов, для изменения которых должна быть специальная обработка значения
 """
 from datetime import datetime
+from sys import flags
+from typing import get_args
 
-from .data import DS_GROUP_SCOPE, DS_GROUP_CATEGORY
-from .convertors_value import _UAC_FLAGS, convert_grouptype
+from .data import DS_GROUP_SCOPE, DS_GROUP_CATEGORY, DS_ENCRYPT_TYPE
+from .convertors_value import _UAC_FLAGS, convert_grouptype, _TEK_FLAGS
 
 
 def gen_uac(uac: int, enabled: bool = None, password_never_expires: bool = None,
@@ -136,3 +138,52 @@ def gen_gt(gt: int, group_scope: DS_GROUP_SCOPE = None, group_category: DS_GROUP
 
     # Возращение значения в виде десятеричного числа
     return convert_grouptype(gt)
+
+
+def gen_ket(ket: int, flags_: list[DS_ENCRYPT_TYPE]):
+    """
+    Формирование msDS-SupportedEncryptionTypes на основе входящего значения с учётом новых ключей.
+    Если передан только None, то поле будет очищено. Все ключи привязанные к DS_ENCRYPT_TYPE,
+    которые не запрашивались, будут удалены
+
+    Args:
+        tek: Исходное значения msDS-SupportedEncryptionTypes. Допустимо передать 0
+        flags_: Передаваемые флаги
+    """
+    # Если передан только флаг отсутствия шифрования, значение будет сброшено
+    if len(flags_) == 1 and flags_[0] is None:
+        return _TEK_FLAGS[0]
+
+    # Перебор флагов. Переданные ключи добавляются, остальные убираются
+    add = 0
+    remove = 0
+    for flag in flags_:
+        if flag == 'DES':
+            add |= _TEK_FLAGS['DES-CBC-CRC']
+            add |= _TEK_FLAGS['DES-CBC-MD5']
+        else:
+            remove |= _TEK_FLAGS['DES-CBC-CRC']
+            remove |= _TEK_FLAGS['DES-CBC-MD5']
+
+        if flag == 'RC4':
+            add |= _TEK_FLAGS['RC4-HMAC']
+        else:
+            remove |= _TEK_FLAGS['RC4-HMAC']
+
+        if flag == 'AES128':
+            add |= _TEK_FLAGS['AES128-CTS-HMAC-SHA1-96']
+        else:
+            remove |= _TEK_FLAGS['AES128-CTS-HMAC-SHA1-96']
+
+        if flag == 'AES256':
+            add |= _TEK_FLAGS['AES256-CTS-HMAC-SHA1-96']
+        else:
+            remove |= _TEK_FLAGS['AES256-CTS-HMAC-SHA1-96']
+
+        if flag not in get_args(DS_ENCRYPT_TYPE):
+            raise ValueError(f"Not found flag: {flag}")
+
+    ket &= ~remove
+    ket |= add
+
+    return ket

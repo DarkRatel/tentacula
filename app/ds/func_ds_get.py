@@ -14,7 +14,7 @@ from ldap.controls.libldap import SimplePagedResultsControl
 from .data import DataDSLDAP, DS_TYPE_SCOPE, DS_TYPE_OBJECT_SYSTEM, Event
 from .ds_dict import DSDict
 from .attributes_type import ATTR_TYPES
-from .convertors_value import convert_grouptype, convert_object_class, uac_to_flags, _UAC_FLAGS
+from .convertors_value import convert_grouptype, convert_object_class, uac_to_flags, _UAC_FLAGS, convert_tek
 
 DEFAULT_SIZE_LDAP_PAGE = 1499
 
@@ -66,6 +66,9 @@ ATTR_EXTEND = {
     },
     "pwdLastSet": {
         'ChangePasswordAtLogon': lambda v: True if v == 0 else False,
+    },
+    "msDS-SupportedEncryptionTypes": {
+        "FlagsKET": lambda v: convert_tek(int(v)),
     },
 }
 

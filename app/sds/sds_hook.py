@@ -17,7 +17,7 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives import serialization
 
 from app.ds import DSHook, DSDict, Event
-from app.ds import DS_TYPE_SCOPE, DS_TYPE_OBJECT, DS_GROUP_SCOPE, DS_GROUP_CATEGORY
+from app.ds import DS_TYPE_SCOPE, DS_TYPE_OBJECT, DS_GROUP_SCOPE, DS_GROUP_CATEGORY, DS_ENCRYPT_TYPE
 
 
 class MergingLoggerAdapter(logging.LoggerAdapter):
@@ -636,7 +636,8 @@ class SDSHook:
                  display_name: str = None, description: str = None, sam_account_name: str = None,
                  user_principal_name: str = None, enabled: bool = None, password_never_expires: bool = None,
                  account_not_delegated: bool = None, change_password_at_logon: bool = None,
-                 account_expiration_date: bool | datetime | str = None) -> None:
+                 account_expiration_date: bool | datetime | str = None,
+                 kerberos_encryption_type: list[DS_ENCRYPT_TYPE] = None) -> None:
         """
         Функция изменения атрибутов пользователя в DS.
 
@@ -655,6 +656,7 @@ class SDSHook:
             account_not_delegated: Включение или отключение запрета на делегирование.
             change_password_at_logon: Включение или отключение требования сменить пароль при входе.
             account_expiration_date: Указание даты или отключение срока действия пользователя.
+            kerberos_encryption_type: Изменение поддерживаемых типов шифрования. Если передан только None как элемент массива, атрибут будет равен 0. Шифрования, которые не были переданы, будут удалены
         """
         return self._query('set_user', locals_value(locals()))
 
@@ -683,7 +685,8 @@ class SDSHook:
     def set_computer(self, identity: str | dict | DSDict,
                      remove: dict[str, list | bool | str] = None, add: dict[str, list | bool | str] = None,
                      replace: dict[str, list | bool | str] = None, clear: list[str] = None,
-                     display_name: str = None, description: str = None) -> None:
+                     display_name: str = None, description: str = None,
+                     kerberos_encryption_type: list[DS_ENCRYPT_TYPE] = None) -> None:
         """
         Функция изменения атрибутов компьютера в DS.
 
@@ -695,6 +698,7 @@ class SDSHook:
             clear: Очистка атрибута.
             display_name: Заполнение или изменение атрибута "displayName".
             description: Заполнение или изменение атрибута "description".
+            kerberos_encryption_type: Изменение поддерживаемых типов шифрования. Если передан только None как элемент массива, атрибут будет равен 0. Шифрования, которые не были переданы, будут удалены
         """
         return self._query('set_computer', locals_value(locals()))
 
@@ -782,7 +786,8 @@ class SDSHook:
                  user_principal_name: str = None, enabled: bool = None, password_never_expires: bool = None,
                  account_not_delegated: bool = None, change_password_at_logon: bool = None,
                  account_expiration_date: bool | datetime | str = None,
-                 other_attributes: dict[str, list] = None) -> None:
+                 other_attributes: dict[str, list] = None,
+                 kerberos_encryption_type: list[DS_ENCRYPT_TYPE] = None) -> None:
         """
             Функция создания объекта типа пользователь.
 
@@ -799,7 +804,8 @@ class SDSHook:
                 change_password_at_logon: Указатель, необходимости сменить пароль при входе
                 account_expiration_date: Указывание даты исчезания пользователя, либо отключение параметра (False)
                 other_attributes: Словарь с дополнительными атрибутами
-            """
+                kerberos_encryption_type: Изменение поддерживаемых типов шифрования. Если передан только None как элемент массива, атрибут будет равен 0. Шифрования, которые не были переданы, будут удалены
+        """
         return self._query('new_user', locals_value(locals()))
 
     def new_group(self, path: str, name: str, sam_account_name: str, display_name: str = None,

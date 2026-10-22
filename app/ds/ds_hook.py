@@ -10,11 +10,12 @@ import ldap
 import ldap.sasl
 
 from .ds_dict import DSDict
-from .data import DataDSProperties, DS_TYPE_SCOPE, DS_TYPE_OBJECT, DS_GROUP_SCOPE, DS_GROUP_CATEGORY, Event
+from .data import DataDSProperties, DS_TYPE_SCOPE, DS_TYPE_OBJECT, DS_GROUP_SCOPE, DS_GROUP_CATEGORY, Event, \
+    DS_ENCRYPT_TYPE
 from .func_ds_get import search_object, gen_filter_to_id
 from .func_ds_get_root import search_root_dse, get_root_dse
 from .convertors_value import _UAC_FLAGS
-from .func_ds_gen import gen_uac, gen_gt, gen_change_pwd_at_logon, gen_account_exp_date
+from .func_ds_gen import gen_uac, gen_gt, gen_change_pwd_at_logon, gen_account_exp_date, gen_ket
 from .func_ds_new import ds_new
 from .func_ds_set import ds_set
 from .func_ds_set_member import ds_set_member
@@ -392,7 +393,8 @@ class DSHook:
                  display_name: str = None, description: str = None, sam_account_name: str = None,
                  user_principal_name: str = None, enabled: bool = None, password_never_expires: bool = None,
                  account_not_delegated: bool = None, change_password_at_logon: bool = None,
-                 account_expiration_date: bool | datetime | str = None) -> None:
+                 account_expiration_date: bool | datetime | str = None,
+                 kerberos_encryption_type: list[DS_ENCRYPT_TYPE] = None) -> None:
         """
         Функция изменения атрибутов пользователя в DS.
 
@@ -411,6 +413,7 @@ class DSHook:
             account_not_delegated: Включение или отключение запрета на делегирование.
             change_password_at_logon: Включение или отключение требования сменить пароль при входе.
             account_expiration_date: Указание даты или отключение срока действия пользователя.
+            kerberos_encryption_type: Изменение поддерживаемых типов шифрования. Если передан только None как элемент массива, атрибут будет равен 0. Шифрования, которые не были переданы, будут удалены
         """
 
         special = DSDict()
@@ -420,6 +423,8 @@ class DSHook:
         if sam_account_name: special.update({'sAMAccountName': sam_account_name})
         if account_expiration_date is not None: special.update({'accountExpires': account_expiration_date})
         if change_password_at_logon is not None: special.update({'pwdLastSet': change_password_at_logon})
+        if kerberos_encryption_type is not None:
+            special.update({'msDS-SupportedEncryptionTypes': kerberos_encryption_type})
 
         if user_principal_name:
             if '@' not in user_principal_name:
@@ -482,7 +487,8 @@ class DSHook:
     def set_computer(self, identity: str | dict | DSDict,
                      remove: dict[str, list | bool | str] = None, add: dict[str, list | bool | str] = None,
                      replace: dict[str, list | bool | str] = None, clear: list[str] = None,
-                     display_name: str = None, description: str = None) -> None:
+                     display_name: str = None, description: str = None,
+                     kerberos_encryption_type: list[DS_ENCRYPT_TYPE] = None) -> None:
         """
         Функция изменения атрибутов компьютера в DS.
 
@@ -494,12 +500,16 @@ class DSHook:
             clear: Очистка атрибута.
             display_name: Заполнение или изменение атрибута "displayName".
             description: Заполнение или изменение атрибута "description".
+            kerberos_encryption_type: Изменение поддерживаемых типов шифрования. Если передан только None как элемент массива, атрибут будет равен 0. Шифрования, которые не были переданы, будут удалены
         """
 
         special = DSDict({
             'displayName': display_name,
             'description': description,
         })
+
+        if kerberos_encryption_type is not None:
+            special.update({'msDS-SupportedEncryptionTypes': kerberos_encryption_type})
 
         ds_set(connect=self._connect, type_object="computer", identity=identity, base=self.base, dry_run=self.dry_run,
                remove=remove, add=add, replace=replace, clear=clear, special=special,
@@ -642,7 +652,8 @@ class DSHook:
                  user_principal_name: str = None, enabled: bool = None, password_never_expires: bool = None,
                  account_not_delegated: bool = None, change_password_at_logon: bool = None,
                  account_expiration_date: bool | datetime | str = None,
-                 other_attributes: dict[str, list] = None) -> None:
+                 other_attributes: dict[str, list] = None,
+                 kerberos_encryption_type: list[DS_ENCRYPT_TYPE] = None) -> None:
         """
             Функция создания объекта типа пользователь.
 
@@ -659,7 +670,8 @@ class DSHook:
                 change_password_at_logon: Указатель, необходимости сменить пароль при входе
                 account_expiration_date: Указывание даты исчезания пользователя, либо отключение параметра (False)
                 other_attributes: Словарь с дополнительными атрибутами
-            """
+                kerberos_encryption_type: Изменение поддерживаемых типов шифрования. Если передан только None как элемент массива, атрибут будет равен 0. Шифрования, которые не были переданы, будут удалены
+        """
         dict_object = DSDict()
 
         dict_object['userAccountControl'] = [str(gen_uac(
@@ -669,6 +681,11 @@ class DSHook:
             account_not_delegated=account_not_delegated,
             password_not_required=False,
         ))]
+
+        if kerberos_encryption_type is not None:
+            dict_object.update({
+                'msDS-SupportedEncryptionTypes': [str(gen_ket(ket=0, flags_=kerberos_encryption_type))]
+            })
 
         if isinstance(change_password_at_logon, bool):
             dict_object['pwdLastSet'] = [gen_change_pwd_at_logon(change_password_at_logon)]
