@@ -63,7 +63,7 @@ class Event:
     AUTH_ACCESS_DENIED = 'ds.auth.access_denied'
     AUTH_LOGGED_OUT = "ds.auth.logged_out"
 
-    QUERY_GET_ROOTDSE = 'ds.query.get.root_dse' # get_root_dse
+    QUERY_GET_ROOTDSE = 'ds.query.get.root_dse'  # get_root_dse
     QUERY_GET_OBJECT = 'ds.query.get.object'  # get_object
     QUERY_GET_USER = 'ds.query.get.user'  # get_user
     QUERY_GET_GROUP = 'ds.query.get.group'  # get_group
