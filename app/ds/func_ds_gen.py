@@ -152,7 +152,7 @@ def gen_ket(ket: int, flags_: list[DS_ENCRYPT_TYPE]):
     """
     # Если передан только флаг отсутствия шифрования, значение будет сброшено
     if len(flags_) == 1 and flags_[0] is None:
-        return _TEK_FLAGS[0]
+        return 0
 
     # Перебор флагов. Переданные ключи добавляются, остальные убираются
     add = 0
