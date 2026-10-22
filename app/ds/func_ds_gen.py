@@ -147,7 +147,7 @@ def gen_ket(ket: int, flags_: list[DS_ENCRYPT_TYPE]):
     которые не запрашивались, будут удалены
 
     Args:
-        tek: Исходное значения msDS-SupportedEncryptionTypes. Допустимо передать 0
+        ket: Исходное значения msDS-SupportedEncryptionTypes. Допустимо передать 0
         flags_: Передаваемые флаги
     """
     # Если передан только флаг отсутствия шифрования, значение будет сброшено
